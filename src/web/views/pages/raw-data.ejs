@@ -1,0 +1,56 @@
+<% if (!latest || !data) { %>
+  <div class="empty">
+    <div class="ico"><%- h.icon('database') %></div>
+    <h3>No raw data</h3>
+    <p>Run a weekly sync or import a Meta export to explore ad-level rows.</p>
+  </div>
+<% } else { %>
+  <div class="card">
+    <div class="card-body">
+      <div class="tabs" data-tabs="raw">
+        <button type="button" class="tab active" data-tab="meta-l7">Meta · L7</button>
+        <button type="button" class="tab" data-tab="meta-l30">Meta · L30</button>
+        <button type="button" class="tab" data-tab="tw-l7">Attribution · L7</button>
+        <button type="button" class="tab" data-tab="tw-l30">Attribution · L30</button>
+        <button type="button" class="tab" data-tab="merged-l7">Merged · L7</button>
+        <button type="button" class="tab" data-tab="merged-l30">Merged · L30</button>
+      </div>
+
+      <% const panels = [
+        ['meta-l7', data.meta.l7, ['ad_name','campaign_name','spend','impressions','meta_roas','purchases']],
+        ['meta-l30', data.meta.l30, ['ad_name','campaign_name','spend','impressions','meta_roas','purchases']],
+        ['tw-l7', data.tw.l7, ['ad_id','ad_name','spend','attributed_revenue','tw_roas','new_visitors']],
+        ['tw-l30', data.tw.l30, ['ad_id','ad_name','spend','attributed_revenue','tw_roas','new_visitors']],
+        ['merged-l7', data.merged.l7, ['ad_name','campaign_name','spend','meta_roas','tw_roas','win_loss','has_tw_match']],
+        ['merged-l30', data.merged.l30, ['ad_name','campaign_name','spend','meta_roas','tw_roas','win_loss','has_tw_match']],
+      ]; %>
+      <% panels.forEach(function(p, idx) { var key=p[0], rows=p[1], cols=p[2]; %>
+        <div class="tab-panel <%= idx===0?'active':'' %>" data-panel="<%= key %>">
+          <div class="table-toolbar">
+            <span class="count"><%= (rows||[]).length %> rows</span>
+            <input type="search" class="input table-filter" placeholder="Filter rows…" data-target="<%= key %>"/>
+          </div>
+          <div class="table-wrap table-scroll">
+            <table class="data-table" data-table="<%= key %>">
+              <thead><tr><% cols.forEach(function(c){ %><th><%= c %></th><% }); %></tr></thead>
+              <tbody>
+                <% (rows || []).slice(0, 500).forEach(function(row) { %>
+                  <tr>
+                    <% cols.forEach(function(c) {
+                      var v = row[c];
+                      if (c === 'spend' || c === 'attributed_revenue' || c === 'purchase_value') v = h.fmtCurrency(Number(v)||0);
+                      else if (c.includes('roas')) v = h.fmtRoas(Number(v)||0);
+                      else if (typeof v === 'boolean') v = v ? 'yes' : 'no';
+                      else v = v == null ? '—' : String(v);
+                    %><td><%= h.esc(v) %></td><% }); %>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <% if ((rows||[]).length > 500) { %><p class="muted" style="margin-top:8px;font-size:12px">Showing first 500 of <%= rows.length %> rows.</p><% } %>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+<% } %>

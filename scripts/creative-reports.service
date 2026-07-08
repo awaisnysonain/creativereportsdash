@@ -1,0 +1,17 @@
+[Unit]
+Description=Creative Reports (Node.js + weekly cron)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/var/www/creative-reports
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Set APP_URL in .env.local on the server for correct Slack report links
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

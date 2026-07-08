@@ -1,0 +1,175 @@
+<%- include('../partials/db-banner') %>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Data sync</div>
+      <div class="card-desc">Pull ad-level Meta metrics and attribution data, merge by Ad ID, analyze, and generate the weekly report.</div>
+    </div>
+  </div>
+  <div class="card-body source-card">
+    <div class="source-block">
+      <h4><%- h.icon('play') %> Weekly sync</h4>
+      <p>Fetches Meta ad-level insights (spend, purchases, 3-second video views) and pixel-attributed metrics per ad. Results are merged, analyzed, and stored for reporting.</p>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn sm" data-job="weeklyFullRun" data-post-slack="true"><%- h.icon('play') %> Run sync &amp; post to Slack</button>
+        <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Sync Meta only</button>
+        <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Sync attribution only</button>
+      </div>
+    </div>
+    <div class="source-block">
+      <h4><%- h.icon('upload') %> File import</h4>
+      <p>Upload a Meta Ads Manager CSV or XLSX export to validate parser output and report layout against a known sheet.</p>
+      <a class="link-action" href="#file-import" style="margin-top:12px;display:inline-flex">Go to file import <%- h.icon('chevron-right') %></a>
+    </div>
+  </div>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Connections</div><div class="card-desc">Integration status and connection tests.</div></div>
+    <div class="card-body list-tight">
+      <% integrations.forEach(function(i) { %>
+        <% var test = h.INTEGRATION_TEST[i.key]; %>
+        <div class="tile">
+          <div>
+            <div class="t-label"><%= h.esc(i.label) %></div>
+            <div class="t-detail"><%= h.esc(i.detail) %></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="dot <%= i.configured ? 'on' : 'off' %>" title="<%= i.configured ? 'Configured' : 'Not configured' %>"></span>
+            <% if (test) { %>
+              <button type="button" class="btn outline sm" data-test="<%= test.type %>" data-test-key="<%= test.key || '' %>">Test</button>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Brand accounts</div><div class="card-desc">Meta ad accounts and attribution stores mapped to each brand.</div></div>
+    <div class="card-body list-tight">
+      <% (topology.brands || []).forEach(function(b) { %>
+        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-weight:700;margin-bottom:6px;font-size:13px"><%= h.esc(b.label) %></div>
+          <div class="muted" style="font-size:12px;font-weight:500">Meta ads: <%= (b.metaAccounts||[]).map(a => a.label).join(', ') || '—' %></div>
+          <div class="muted" style="font-size:12px;font-weight:500;margin-top:2px">Attribution: <%= (b.stores||[]).map(s => s.label).join(', ') || '—' %></div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="file-import">
+  <div class="card-header">
+    <div class="card-title">File import</div>
+    <div class="card-desc">Upload a Meta Ads Manager CSV or XLSX export (ad-level, with Ad ID column).</div>
+  </div>
+  <div class="card-body">
+    <form id="import-form" enctype="multipart/form-data">
+      <div class="dropzone" id="dropzone">
+        <div class="dz-icon"><%- h.icon('upload') %></div>
+        <p><strong>Drop a Meta export</strong> or click to browse</p>
+        <p class="muted" style="font-size:12px;margin-top:6px">CSV or XLSX · ad-level rows with Ad ID</p>
+        <input type="file" name="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none"/>
+      </div>
+      <div class="form-row" style="margin-top:14px">
+        <div class="field">
+          <label>Brand</label>
+          <select name="brand" class="input">
+            <option value="NOBL">NOBL</option>
+            <option value="FLO">FLO</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Window</label>
+          <select name="window" class="input">
+            <option value="L7">L7</option>
+            <option value="L30">L30</option>
+          </select>
+        </div>
+        <button type="submit" class="btn" id="import-btn" disabled><%- h.icon('upload') %> Import and analyze</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">Pipeline steps</div><div class="card-desc">Run individual steps against the current or latest sync run.</div></div>
+  <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px">
+    <button type="button" class="btn outline sm" data-job="weeklyFullRun" data-post-slack="false"><%- h.icon('play') %> Full weekly sync</button>
+    <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Sync Meta</button>
+    <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Sync attribution</button>
+    <button type="button" class="btn outline sm" data-job="mergeCreativeData"><%- h.icon('layers') %> Merge</button>
+    <button type="button" class="btn outline sm" data-job="computeCreativeAnalysis"><%- h.icon('chart') %> Analyze</button>
+    <button type="button" class="btn outline sm" data-job="generateWeeklyAIReport"><%- h.icon('sparkles') %> Generate report</button>
+  </div>
+</div>
+
+<div class="card" id="raw-data">
+  <div class="card-header">
+    <div class="card-title">Raw data</div>
+    <div class="card-desc">Inspect ad-level Meta, attribution, and merged rows from the latest sync.</div>
+  </div>
+  <div class="card-body">
+    <% if (latest) { %>
+      <a class="link-action" href="/raw-data">Open raw data <%- h.icon('chevron-right') %></a>
+      <span class="muted" style="margin-left:12px;font-size:12px">Run <code><%= h.esc(latest.id.slice(0,8)) %></code></span>
+    <% } else { %>
+      <p class="muted">No sync run yet. Run a weekly sync or import a file first.</p>
+    <% } %>
+  </div>
+</div>
+
+<div class="card" id="run-history">
+  <div class="card-header">
+    <div class="card-title">Sync history</div>
+    <div class="card-desc">Past weekly sync runs and their status.</div>
+  </div>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Brand</th><th>Status</th><th>Trigger</th><th>Spend</th><th>Finished</th></tr></thead>
+        <tbody>
+          <% if (!(runs && runs.length)) { %><tr><td colspan="6" class="muted">No runs yet.</td></tr><% } %>
+          <% (runs || []).forEach(function(r) { %>
+            <tr>
+              <td><code style="font-size:11px"><%= h.esc(r.id.slice(0,8)) %></code></td>
+              <td><%= h.esc(r.brand_key) %></td>
+              <td><%- h.badge(r.status, r.status === 'success' ? 'success' : r.status === 'partial' ? 'warning' : r.status === 'failed' ? 'destructive' : 'muted', true) %></td>
+              <td class="cap"><%= h.esc(r.trigger) %></td>
+              <td class="tabular"><%= h.fmtCurrency(Number(r.spend)||0) %></td>
+              <td class="muted" style="font-size:12px"><%= r.finished_at ? new Date(r.finished_at).toLocaleString() : '—' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="job-logs">
+  <div class="card-header">
+    <div class="card-title">Job logs</div>
+    <div class="card-desc">Execution traces and errors for individual pipeline steps.</div>
+  </div>
+  <div class="card-body">
+    <div class="table-wrap table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Time</th><th>Job</th><th>Status</th><th>Message</th></tr></thead>
+        <tbody>
+          <% if (!(logs && logs.length)) { %><tr><td colspan="4" class="muted">No job logs.</td></tr><% } %>
+          <% (logs || []).forEach(function(l) { %>
+            <tr>
+              <td class="muted" style="font-size:11px;white-space:nowrap"><%= new Date(l.created_at).toLocaleString() %></td>
+              <td><code style="font-size:11px"><%= h.esc(l.job) %></code></td>
+              <td><%- h.badge(l.status, l.status === 'success' ? 'success' : l.status === 'failed' ? 'destructive' : 'warning', true) %></td>
+              <td style="font-size:12px"><%= h.esc(l.message || '') %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

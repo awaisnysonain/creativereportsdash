@@ -1,0 +1,26 @@
+# Local PostgreSQL for Creative Reports.
+# Usage (requires Docker Desktop):
+#   docker compose up -d
+# Then set in .env.local:
+#   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/creative_reports
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: creative-reports-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: creative_reports
+    ports:
+      - "5432:5432"
+    volumes:
+      - creative_reports_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d creative_reports"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  creative_reports_pgdata:

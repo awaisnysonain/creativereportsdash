@@ -1,0 +1,54 @@
+<div class="report-layout" id="reports-app" data-initial-id="<%= h.esc(initialId) %>">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Report history</div><div class="card-desc">Past weekly reports generated from sync runs.</div></div>
+    <div class="card-body report-list" id="report-list">
+      <% if (!reports.length) { %>
+        <p class="muted">No reports yet. Run a weekly sync from Settings to generate one.</p>
+      <% } %>
+      <% reports.forEach(function(r) { %>
+        <button type="button" class="report-item <%= r.id === initialId ? 'active' : '' %>" data-report-id="<%= r.id %>">
+          <div class="r-title"><%= h.esc(r.title) %></div>
+          <div class="r-meta">
+            <span><%= new Date(r.created_at).toLocaleDateString() %></span>
+            <%- h.badge(r.model === 'template' ? 'template' : 'AI', r.model === 'template' ? 'muted' : 'default') %>
+          </div>
+        </button>
+      <% }); %>
+    </div>
+  </div>
+
+  <div class="card" id="report-viewer">
+    <div class="card-header card-header-actions">
+      <div class="card-title" id="report-title"><% var initTitle = null; for (var ti = 0; ti < reports.length; ti++) { if (reports[ti].id === initialId) { initTitle = reports[ti]; break; } } if (!initTitle && reports.length) initTitle = reports[0]; %><%= reports.length ? h.esc(initTitle.title) : 'No report selected' %></div>
+      <div class="card-actions">
+        <button type="button" class="btn outline sm" id="btn-regenerate" data-job="generateWeeklyAIReport" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('refresh') %> Regenerate</button>
+        <button type="button" class="btn sm" id="btn-slack-post" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('send') %> Post to Slack</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="tabs" data-tabs="report-view">
+        <button type="button" class="tab active" data-tab="markdown">Full Report</button>
+        <button type="button" class="tab" data-tab="slack">Slack Preview</button>
+      </div>
+      <div class="tab-panel active" data-panel="markdown">
+        <div class="markdown" id="report-markdown">
+          <% var init = null; for (var ri = 0; ri < reports.length; ri++) { if (reports[ri].id === initialId) { init = reports[ri]; break; } } if (!init && reports.length) init = reports[0]; %>
+          <% if (init) { %><%- h.renderMarkdown(init.markdown) %><% } else { %><p class="muted">Select or generate a report.</p><% } %>
+        </div>
+      </div>
+      <div class="tab-panel" data-panel="slack">
+        <div class="slack-preview" id="report-slack">
+          <% if (init) { %>
+            <div class="av">CR</div>
+            <div class="body">
+              <div class="head"><strong>Creative Reports</strong> <span class="badge muted">bot</span></div>
+              <div style="margin-top:8px"><%- h.slackToHtml(init.slack_summary) %></div>
+            </div>
+          <% } else { %><p class="muted">No Slack summary yet.</p><% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="reports-data"><%- JSON.stringify(reports.map(r => ({ id: r.id, title: r.title, markdown: r.markdown, slack_summary: r.slack_summary, model: r.model }))) %></script>

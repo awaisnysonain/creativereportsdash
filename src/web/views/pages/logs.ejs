@@ -1,0 +1,49 @@
+<%- include('../partials/db-banner') %>
+
+<div class="grid two">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Sync Runs</div></div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Brand</th><th>Status</th><th>Trigger</th><th>Spend</th><th>Finished</th></tr></thead>
+          <tbody>
+            <% if (!runs.length) { %><tr><td colspan="6" class="muted">No runs yet.</td></tr><% } %>
+            <% runs.forEach(function(r) { %>
+              <tr>
+                <td><code style="font-size:11px"><%= h.esc(r.id.slice(0,8)) %>…</code></td>
+                <td><%= h.esc(r.brand_key) %></td>
+                <td><%- h.badge(r.status, r.status === 'success' ? 'success' : r.status === 'partial' ? 'warning' : r.status === 'failed' ? 'destructive' : 'muted', true) %></td>
+                <td class="cap"><%= h.esc(r.trigger) %></td>
+                <td class="tabular"><%= h.fmtCurrency(Number(r.spend)||0) %></td>
+                <td class="muted" style="font-size:12px"><%= r.finished_at ? new Date(r.finished_at).toLocaleString() : '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Job Logs</div></div>
+    <div class="card-body">
+      <div class="table-wrap table-scroll">
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Job</th><th>Status</th><th>Message</th></tr></thead>
+          <tbody>
+            <% if (!logs.length) { %><tr><td colspan="4" class="muted">No job logs.</td></tr><% } %>
+            <% logs.forEach(function(l) { %>
+              <tr>
+                <td class="muted" style="font-size:11px;white-space:nowrap"><%= new Date(l.created_at).toLocaleString() %></td>
+                <td><code style="font-size:11px"><%= h.esc(l.job) %></code></td>
+                <td><%- h.badge(l.status, l.status === 'success' ? 'success' : l.status === 'failed' ? 'destructive' : 'warning', true) %></td>
+                <td style="font-size:12px"><%= h.esc(l.message || '') %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

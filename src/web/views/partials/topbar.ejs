@@ -1,0 +1,16 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <button type="button" class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="topbar-titles">
+      <h1><%= h.esc(title) %></h1>
+      <% if (typeof subtitle !== 'undefined' && subtitle) { %>
+        <p class="sub"><%= h.esc(subtitle) %></p>
+      <% } %>
+    </div>
+  </div>
+  <% if (typeof actions !== 'undefined' && actions) { %>
+    <div class="topbar-actions"><%- actions %></div>
+  <% } %>
+</header>

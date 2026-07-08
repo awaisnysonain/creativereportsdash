@@ -1,0 +1,37 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+
+# env files — NEVER COMMIT SECRETS
+.env
+.env.local
+.env*.local
+!.env.example
+!.env.local.example
+
+# typescript
+*.tsbuildinfo
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# local data / uploads
+/tmp
+/uploads

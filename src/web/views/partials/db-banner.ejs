@@ -1,0 +1,11 @@
+<% if (!status.configured) { %>
+  <div class="banner warn">
+    <strong>Database not configured.</strong>
+    Set <code>DATABASE_URL</code> in <code>.env.local</code> and run <code>npm run db:migrate</code>.
+  </div>
+<% } else if (!status.ok) { %>
+  <div class="banner err">
+    <strong>Database connection failed.</strong>
+    <%= h.esc(status.error || 'Check DATABASE_URL and network access.') %>
+  </div>
+<% } %>
