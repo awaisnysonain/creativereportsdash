@@ -4,6 +4,14 @@ import { campaignFunnel } from "./campaign-rules";
 import { safeDiv } from "@/lib/utils";
 import type { BrandKey } from "@/config/brands";
 
+/** Normalize ad IDs so Meta and Triple Whale rows join reliably. */
+function normAdId(id: string | null | undefined): string {
+  const s = String(id ?? "").trim();
+  if (!s) return "";
+  const digits = s.replace(/\D/g, "");
+  return digits || s;
+}
+
 /**
  * Merge Meta + Triple Whale ad metrics into unique creatives.
  *
@@ -46,16 +54,21 @@ export function mergeCreativeMetrics(
   // 1) Aggregate Triple Whale by ad_id.
   const twByAd = new Map<string, TripleWhaleAdMetric>();
   for (const t of tw) {
-    const e = twByAd.get(t.adId);
+    const key = normAdId(t.adId);
+    if (!key) continue;
+    const e = twByAd.get(key);
     if (e) {
+      const prevNcRev = (e.ncRoas ?? 0) * e.spend;
+      const addNcRev = (t.ncRoas ?? 0) * t.spend;
       e.spend += t.spend;
       e.attributedRevenue += t.attributedRevenue;
       e.newVisitors += t.newVisitors;
       e.uniqueVisitors += t.uniqueVisitors;
       e.orders += t.orders;
       e.newCustomerOrders += t.newCustomerOrders;
+      e.ncRoas = safeDiv(prevNcRev + addNcRev, e.spend);
     } else {
-      twByAd.set(t.adId, { ...t });
+      twByAd.set(key, { ...t, adId: key });
     }
   }
 
@@ -145,7 +158,7 @@ export function mergeCreativeMetrics(
     let newCustomerOrders = 0;
     let matched = false;
     for (const adId of g.adIds) {
-      const t = twByAd.get(adId);
+      const t = twByAd.get(normAdId(adId));
       if (!t) continue;
       matched = true;
       twSpend += t.spend;

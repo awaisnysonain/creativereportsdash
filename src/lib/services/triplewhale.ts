@@ -95,6 +95,7 @@ export function normalizeTwRow(
 ): TripleWhaleAdMetric | null {
   const adId = pickStr(row, ["ad_id", "adId", "adid", "entity_id", "id"]);
   if (!adId) return null;
+  const adKey = adId.replace(/\D/g, "") || adId;
 
   const spend = pick(row, ["spend", "adSpend", "ad_spend", "total_spend", "cost"]);
   const attributedRevenue = pick(row, [
@@ -113,7 +114,7 @@ export function normalizeTwRow(
   return {
     storeKey: store.key,
     brand: store.brand,
-    adId,
+    adId: adKey,
     adName: pickStr(row, ["ad_name", "adName", "name", "entity_name"]),
     spend,
     attributedRevenue,

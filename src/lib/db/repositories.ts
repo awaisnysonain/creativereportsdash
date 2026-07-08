@@ -104,7 +104,14 @@ export async function listSyncRuns(limit = 50): Promise<SyncRunRow[]> {
 
 export async function latestSuccessfulRun(): Promise<SyncRunRow | null> {
   return queryOne<SyncRunRow>(
-    `SELECT * FROM sync_runs WHERE status IN ('success','partial') ORDER BY started_at DESC LIMIT 1`,
+    `SELECT sr.* FROM sync_runs sr
+     WHERE sr.status IN ('success','partial')
+     ORDER BY
+       CASE WHEN EXISTS (
+         SELECT 1 FROM triple_whale_ad_metrics tw WHERE tw.run_id = sr.id LIMIT 1
+       ) THEN 0 ELSE 1 END,
+       sr.started_at DESC
+     LIMIT 1`,
   );
 }
 

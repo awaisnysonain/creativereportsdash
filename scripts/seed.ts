@@ -14,7 +14,7 @@ async function main() {
   }
 
   // Import lazily so env is loaded first.
-  const { query } = await import("../src/lib/db/client");
+  const { query, queryOne } = await import("../src/lib/db/client");
   const { BRANDS, META_ACCOUNTS, TW_STORES } = await import("../src/config/brands");
 
   console.log("→ Seeding brands / accounts / stores…");
@@ -44,6 +44,12 @@ async function main() {
   const l30File = path.resolve(process.cwd(), "samples/NT1-Ads-Jun-7-2026-Jul-6-2026.csv");
 
   if (existsSync(l7File) && existsSync(l30File)) {
+    const existing = await queryOne<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM sync_runs WHERE status IN ('success','partial') AND trigger != 'import'`,
+    );
+    if (Number(existing?.n ?? 0) > 0) {
+      console.log("ℹ Live sync runs already exist — skipping sample CSV demo import.");
+    } else {
     console.log("→ Importing sample Meta exports (NOBL) as a demo run…");
     const { importMetaCsv } = await import("../src/lib/importer/meta-csv");
     const { importAndAnalyze } = await import("../src/lib/jobs/pipeline");
@@ -56,12 +62,13 @@ async function main() {
     const result = await importAndAnalyze({
       brand: "NOBL",
       windows: [
-        { window: "L7", meta: l7.rows },
-        { window: "L30", meta: l30.rows },
+        { window: "L7", meta: l7.rows, tw: l7.tw },
+        { window: "L30", meta: l30.rows, tw: l30.tw },
       ],
       generateReport: true,
     });
     console.log(`✓ Demo run created: ${result.runId}${result.reportId ? ` (report ${result.reportId})` : ""}`);
+    }
   } else {
     console.log("ℹ No sample CSVs found in /samples — skipping demo run.");
   }
