@@ -16,7 +16,13 @@ fi
 
 if [ ! -d "$APP_DIR/.git" ]; then
   echo "Cloning repository..."
-  rm -rf "$APP_DIR"/*
+  if [ -d "$APP_DIR" ] && [ "$(ls -A "$APP_DIR" 2>/dev/null | wc -l)" -gt 0 ]; then
+    BACKUP_DIR="${APP_DIR}.bak.$(date +%s)"
+    echo "Backing up existing app to $BACKUP_DIR"
+    sudo mv "$APP_DIR" "$BACKUP_DIR"
+  fi
+  sudo mkdir -p "$APP_DIR"
+  sudo chown ubuntu:ubuntu "$APP_DIR"
   git clone "$REPO" "$APP_DIR"
 else
   echo "Pulling latest..."
