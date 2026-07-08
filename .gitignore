@@ -35,3 +35,6 @@ npm-debug.log*
 # local data / uploads
 /tmp
 /uploads
+
+# deployment artifacts
+deploy*.tgz
