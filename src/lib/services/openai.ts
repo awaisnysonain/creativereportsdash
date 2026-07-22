@@ -67,7 +67,7 @@ function buildContext(brand: string, snapshot: AnalysisSnapshot) {
       uniqueCreative: "Deduped by exact Ad name across ad sets; campaign = where it spent most.",
       winLose: "Delivery test: creative wins if spend ≥ average spend per unique creative in its campaign; zero-spend loses.",
       funnel: "Campaign-based: BOF = `asc+ promo` campaign only; everything else TOF.",
-      tofShare: "Element TOF spend ÷ total account TOF spend for the window.",
+      tofShare: "Element top-of-funnel spend divided by total account top-of-funnel spend for the window.",
       twRoas: "Σ TW attributed revenue ÷ Σ Meta spend.",
       nvPct: "Σ TW new visitors ÷ Σ TW unique visitors.",
       thumbstop: "3-second video plays ÷ impressions (Meta export: 3-second video plays rate per impressions; API: actions.video_view).",
@@ -95,7 +95,8 @@ function withReportDisclaimer(markdown: string): string {
 const SYSTEM_PROMPT = `You are a senior paid-social creative strategist writing the weekly Creative & Creator Performance report for a DTC brand.
 Be concise, strategic, and decision-oriented. Use concrete numbers. Avoid fluff and hedging.
 Respect the methodology provided in the DATA payload exactly — do NOT invent code labels, and honor the campaign-based funnel rule, the delivery-based win/lose definition, the whitelist-only creator scope, and the job-level winner/decelerator thresholds.
-Open with a short "How to read" methodology paragraph derived from the provided methodology object (merge basis, win/lose, campaign-based funnel, TOF sh., NV% and Thumbstop, element-scope caveat, legacy naming disclaimer, Influencer/Creator naming).
+Write in a polished operator-ready style. Avoid decorative markdown, horizontal rules, excessive bullets, hype language, or AI-sounding filler. Use concise paragraphs, clean section headings, and tables where tables are clearer than prose.
+Open with a short "How to read" methodology paragraph derived from the provided methodology object (merge basis, win/lose, campaign-based funnel, top-of-funnel share, new visitor rate, Thumbstop, element-scope caveat, legacy naming disclaimer, Influencer/Creator naming).
 Then structure the markdown report with these sections. In Topline, use a vertical metric table and use these exact column names: Metric, L7, Previous 7, 7 before that. Do not compare L7 against L30 side-by-side there. For the remaining detailed breakout sections, stack L7 first and L30 below it where applicable:
 1. Topline (L7, Previous 7, 7 before that)
 2. Category Performance
@@ -158,10 +159,10 @@ const nv = (n: number) => (n ? `${Math.round(n * 100)}%` : "—");
 const tofsh = (n: number) => (n ? `${(n * 100).toFixed(1)}%` : "—");
 const thumb = (n: number) => (n ? `${Math.round(n * 100)}%` : "—");
 
-function groupTable(rows: GroupBreakout[], shareLabel: "TOF sh." | "Share", withThumb: boolean, colLabel: string): string {
+function groupTable(rows: GroupBreakout[], shareLabel: "TOF share" | "Share", withThumb: boolean, colLabel: string): string {
   const head = withThumb
-    ? `| ${colLabel} | Win | Lose | Spend | $ / ad | ${shareLabel} | Thumb | NV % | Meta | TW |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|`
-    : `| ${colLabel} | Win | Lose | Spend | $ / ad | ${shareLabel} | NV % | Meta | TW |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|`;
+    ? `| ${colLabel} | Wins | Losses | Spend | Spend / ad | ${shareLabel} | Thumbstop | New visitor % | Meta ROAS | Attributed ROAS |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|`
+    : `| ${colLabel} | Wins | Losses | Spend | Spend / ad | ${shareLabel} | New visitor % | Meta ROAS | Attributed ROAS |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|`;
   const shareVal = (r: GroupBreakout) => (shareLabel === "Share" ? tofsh(r.share) : tofsh(r.tofShare));
   const body = rows
     .map((r) =>
@@ -174,7 +175,7 @@ function groupTable(rows: GroupBreakout[], shareLabel: "TOF sh." | "Share", with
 }
 
 function scriptTable(rows: ScriptBreakout[]): string {
-  const head = `| Script | Iter. jobs | Win | Lose | Spend | $ / job | TOF sh. | NV % | Meta | TW |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|`;
+  const head = `| Script | Jobs | Wins | Losses | Spend | Spend / job | TOF share | New visitor % | Meta ROAS | Attributed ROAS |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|`;
   const body = rows
     .map(
       (r) =>
@@ -185,7 +186,7 @@ function scriptTable(rows: ScriptBreakout[]): string {
 }
 
 function creatorTable(rows: CreatorBreakout[]): string {
-  const head = `| Creator | Type | Spend | Assets | Meta ROAS | TW ROAS | NV % |\n|---|---|--:|--:|--:|--:|--:|`;
+  const head = `| Creator | Type | Spend | Assets | Meta ROAS | Attributed ROAS | New visitor % |\n|---|---|--:|--:|--:|--:|--:|`;
   const body = rows
     .map((r) => `| ${r.creator} | ${r.type} | ${moneyK(r.spend)} | ${r.assets} | ${formatRoas(r.metaRoas)} | ${formatRoas(r.twRoas)} | ${nv(r.nvPct)} |`)
     .join("\n");
@@ -193,7 +194,7 @@ function creatorTable(rows: CreatorBreakout[]): string {
 }
 
 function winnerTable(rows: WinnerRow[]): string {
-  const head = `| Job | L7 spend | Meta ROAS | TW ROAS |\n|---|---|--:|--:|--:|`;
+  const head = `| Job | L7 spend | Meta ROAS | Attributed ROAS |\n|---|---|--:|--:|--:|`;
   const body = rows
     .map((r) => `| ${r.label} | ${money(r.l7Spend)} | ${formatRoas(r.metaRoas)} | ${formatRoas(r.twRoas)} |`)
     .join("\n");
@@ -216,8 +217,8 @@ const HOW_TO_READ =
   "(all TW-unmatched rows carry $0 spend, so totals are unaffected). Win / Lose = a unique creative — " +
   "ad-set copies de-duplicated — whose delivery met or beat the average spend per creative in its campaign; " +
   "in Script Iteration Tracking it is counted once per job, not per copy. TOF sh. = the element's share of " +
-  "total TOF spend for the window. Funnel is assigned by campaign: only `usa - asc+ promo` is BOF; every other " +
-  "campaign counts as TOF. Share (Demo table) = share of demo-coded spend. NV % = TW new visitors ÷ unique " +
+  "top-of-funnel spend for the window. Funnel is assigned by campaign: only `usa - asc+ promo` is BOF; every other " +
+  "campaign counts as TOF. Share (Demo table) = share of demo-coded spend. New visitor % = TW new visitors ÷ unique " +
   "visitors. Thumb = 3-second video plays ÷ impressions (Meta export column: 3-second video plays rate per impressions). " +
   "Category / Opener / Color / Demo cover only convention-compliant ads carrying that field, so those tables do not " +
   "sum to account totals. Per the naming rules: an open entry tagged \u201cInfluencer\u201d is an influencer; otherwise " +
@@ -256,9 +257,9 @@ export function deterministicReport(brand: string, s: AnalysisSnapshot): Generat
 | Revenue | ${money(l7.revenue)} | ${money(previousL7.revenue)} | ${money(previous2L7.revenue)} |
 | Attrib. Revenue | ${money(l7.attributedRevenue)} | ${money(previousL7.attributedRevenue)} | ${money(previous2L7.attributedRevenue)} |
 | NC ROAS | ${formatRoas(l7.ncRoas)} | ${formatRoas(previousL7.ncRoas)} | ${formatRoas(previous2L7.ncRoas)} |
-| TW ROAS | ${formatRoas(l7.twRoas)} | ${formatRoas(previousL7.twRoas)} | ${formatRoas(previous2L7.twRoas)} |
+| Attributed ROAS | ${formatRoas(l7.twRoas)} | ${formatRoas(previousL7.twRoas)} | ${formatRoas(previous2L7.twRoas)} |
 | Meta ROAS | ${formatRoas(l7.metaRoas)} | ${formatRoas(previousL7.metaRoas)} | ${formatRoas(previous2L7.metaRoas)} |
-| NV % | ${nv(l7.nvPct)} | ${nv(previousL7.nvPct)} | ${nv(previous2L7.nvPct)} |
+| New visitor % | ${nv(l7.nvPct)} | ${nv(previousL7.nvPct)} | ${nv(previous2L7.nvPct)} |
 | TOF Share | ${tofsh(l7.tofShare)} | ${tofsh(previousL7.tofShare)} | ${tofsh(previous2L7.tofShare)} |
 | Unique Creatives | ${l7.creatives.toLocaleString()} | ${previousL7.creatives.toLocaleString()} | ${previous2L7.creatives.toLocaleString()} |`;
 
@@ -280,29 +281,29 @@ _L30 (${prettyWindow(w.l30)}) is still used below for longer-window element brea
 ### Category / asset type (003)
 **L7 · ${prettyWindow(w.l7)}**
 
-${groupTable(b7.categories, "TOF sh.", false, "Category")}
+${groupTable(b7.categories, "TOF share", false, "Category")}
 
 **L30 · ${prettyWindow(w.l30)}**
 
-${groupTable(b30.categories, "TOF sh.", false, "Category")}
+${groupTable(b30.categories, "TOF share", false, "Category")}
 
 ### Visual format — Opener (005), top 15
 **L7 · ${prettyWindow(w.l7)}**
 
-${groupTable(b7.openers, "TOF sh.", true, "Opener")}
+${groupTable(b7.openers, "TOF share", true, "Opener")}
 
 **L30 · ${prettyWindow(w.l30)}**
 
-${groupTable(b30.openers, "TOF sh.", true, "Opener")}
+${groupTable(b30.openers, "TOF share", true, "Opener")}
 
 ### Color (new 007 + legacy 004)
 **L7 · ${prettyWindow(w.l7)}**
 
-${groupTable(b7.colors, "TOF sh.", false, "Color")}
+${groupTable(b7.colors, "TOF share", false, "Color")}
 
 **L30 · ${prettyWindow(w.l30)}**
 
-${groupTable(b30.colors, "TOF sh.", false, "Color")}
+${groupTable(b30.colors, "TOF share", false, "Color")}
 
 ### Creator demo (013) — on-camera talent
 **L7 · ${prettyWindow(w.l7)}**

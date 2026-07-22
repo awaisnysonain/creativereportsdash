@@ -1,9 +1,9 @@
 <div class="report-layout" id="reports-app" data-initial-id="<%= h.esc(initialId) %>">
   <div class="card">
-    <div class="card-header"><div class="card-title">Report history</div><div class="card-desc">Past weekly reports generated from sync runs.</div></div>
+    <div class="card-header"><div class="card-title">Report history</div><div class="card-desc">Select a generated report to review the narrative, tables, and Slack summary.</div></div>
     <div class="card-body report-list" id="report-list">
       <% if (!reports.length) { %>
-        <p class="muted">No reports yet. Run a weekly sync from Settings to generate one.</p>
+        <p class="muted">No reports yet. Run the weekly report from Settings to generate the first narrative.</p>
       <% } %>
       <% reports.forEach(function(r) { %>
         <button type="button" class="report-item <%= r.id === initialId ? 'active' : '' %>" data-report-id="<%= r.id %>">
@@ -21,19 +21,19 @@
     <div class="card-header card-header-actions">
       <div class="card-title" id="report-title"><% var initTitle = null; for (var ti = 0; ti < reports.length; ti++) { if (reports[ti].id === initialId) { initTitle = reports[ti]; break; } } if (!initTitle && reports.length) initTitle = reports[0]; %><%= reports.length ? h.esc(initTitle.title) : 'No report selected' %></div>
       <div class="card-actions">
-        <button type="button" class="btn outline sm" id="btn-regenerate" data-job="generateWeeklyAIReport" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('refresh') %> Regenerate</button>
-        <button type="button" class="btn sm" id="btn-slack-post" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('send') %> Post to Slack</button>
+        <button type="button" class="btn outline sm" id="btn-regenerate" data-job="generateWeeklyAIReport" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('refresh') %> Regenerate narrative</button>
+        <button type="button" class="btn sm" id="btn-slack-post" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('send') %> Send to Slack</button>
       </div>
     </div>
     <div class="card-body">
       <div class="tabs" data-tabs="report-view">
-        <button type="button" class="tab active" data-tab="markdown">Full Report</button>
-        <button type="button" class="tab" data-tab="slack">Slack Preview</button>
+        <button type="button" class="tab active" data-tab="markdown">Full report</button>
+        <button type="button" class="tab" data-tab="slack">Slack preview</button>
       </div>
       <div class="tab-panel active" data-panel="markdown">
         <div class="markdown" id="report-markdown">
           <% var init = null; for (var ri = 0; ri < reports.length; ri++) { if (reports[ri].id === initialId) { init = reports[ri]; break; } } if (!init && reports.length) init = reports[0]; %>
-          <% if (init) { %><%- h.renderMarkdown(init.markdown) %><% } else { %><p class="muted">Select or generate a report.</p><% } %>
+          <% if (init) { %><%- h.renderMarkdown(init.markdown) %><% } else { %><p class="muted">Select a report from history or generate a new one.</p><% } %>
         </div>
       </div>
       <div class="tab-panel" data-panel="slack">
@@ -44,7 +44,7 @@
               <div class="head"><strong>Creative Reports</strong> <span class="badge muted">bot</span></div>
               <div style="margin-top:8px"><%- h.slackToHtml(init.slack_summary) %></div>
             </div>
-          <% } else { %><p class="muted">No Slack summary yet.</p><% } %>
+          <% } else { %><p class="muted">No Slack summary available yet.</p><% } %>
         </div>
       </div>
     </div>

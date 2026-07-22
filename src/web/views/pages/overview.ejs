@@ -1,10 +1,10 @@
 <% if (!snapshot) { %>
   <div class="empty">
     <div class="ico"><%- h.icon('trending') %></div>
-    <h3>No data yet</h3>
-    <p>Run a weekly sync from Settings to load Meta ad metrics and attribution data, or import a Meta Ads Manager export.</p>
+    <h3>No performance data yet</h3>
+    <p>Run the weekly report to pull Meta and attribution data, merge creative performance, and prepare the dashboard.</p>
     <% if (status.ok) { %>
-      <button type="button" class="btn" data-job="weeklyFullRun" data-post-slack="false"><%- h.icon('play') %> Run weekly sync</button>
+      <button type="button" class="btn" data-job="weeklyFullRun" data-post-slack="false"><%- h.icon('play') %> Run weekly report</button>
     <% } %>
   </div>
 <% } %>
@@ -22,49 +22,49 @@
 <% if (snapshot) { %>
   <section>
     <div class="section-head">
-      <h2>Last 7 days</h2>
+      <h2>Current week</h2>
       <span class="badge outline"><%= h.esc(w7) %></span>
     </div>
     <div class="grid kpi-row seven">
       <div class="card kpi"><div class="label">Spend</div><div class="value tabular"><%= h.fmtCurrency(l7.spend, { compact: l7.spend > 100000 }) %></div><div class="sub"><%= h.fmtNumber(l7.purchases) %> purchases</div></div>
-      <div class="card kpi"><div class="label">Creatives</div><div class="value tabular"><%= h.fmtNumber(l7.creatives) %></div><div class="sub">unique ad names</div></div>
+      <div class="card kpi"><div class="label">Unique creatives</div><div class="value tabular"><%= h.fmtNumber(l7.creatives) %></div><div class="sub">deduped by ad name</div></div>
       <div class="card kpi"><div class="label">Meta ROAS</div><div class="value tabular"><%= h.fmtRoas(l7.metaRoas) %></div><%- h.delta(h.pctChange(l7.metaRoas, l30.metaRoas)) %></div>
-      <div class="card kpi"><div class="label">Attrib. ROAS</div><div class="value tabular"><%= h.fmtRoas(l7.twRoas) %></div><%- h.delta(h.pctChange(l7.twRoas, l30.twRoas)) %></div>
+      <div class="card kpi"><div class="label">Attributed ROAS</div><div class="value tabular"><%= h.fmtRoas(l7.twRoas) %></div><%- h.delta(h.pctChange(l7.twRoas, l30.twRoas)) %></div>
       <div class="card kpi"><div class="label">NC ROAS</div><div class="value tabular"><%= h.fmtRoas(l7.ncRoas) %></div><%- h.delta(h.pctChange(l7.ncRoas, l30.ncRoas)) %></div>
-      <div class="card kpi"><div class="label">TOF share</div><div class="value tabular"><%= h.fmtPercent(l7.tofShare) %></div></div>
-      <div class="card kpi"><div class="label">New visitor %</div><div class="value tabular"><%= h.fmtPercent(l7.nvPct) %></div></div>
+      <div class="card kpi"><div class="label">TOF share</div><div class="value tabular"><%= h.fmtPercent(l7.tofShare) %></div><div class="sub">prospecting mix</div></div>
+      <div class="card kpi"><div class="label">New visitor rate</div><div class="value tabular"><%= h.fmtPercent(l7.nvPct) %></div><div class="sub">attribution signal</div></div>
     </div>
   </section>
 
   <section>
     <div class="section-head">
-      <h2>Last 30 days</h2>
+      <h2>Trailing 30 days</h2>
       <span class="badge outline"><%= h.esc(w30) %></span>
     </div>
     <div class="grid kpi-row seven">
       <div class="card kpi"><div class="label">Spend</div><div class="value tabular"><%= h.fmtCurrency(l30.spend, { compact: l30.spend > 100000 }) %></div><div class="sub"><%= h.fmtNumber(l30.purchases) %> purchases</div></div>
-      <div class="card kpi"><div class="label">Creatives</div><div class="value tabular"><%= h.fmtNumber(l30.creatives) %></div><div class="sub">unique ad names</div></div>
+      <div class="card kpi"><div class="label">Unique creatives</div><div class="value tabular"><%= h.fmtNumber(l30.creatives) %></div><div class="sub">deduped by ad name</div></div>
       <div class="card kpi"><div class="label">Meta ROAS</div><div class="value tabular"><%= h.fmtRoas(l30.metaRoas) %></div></div>
-      <div class="card kpi"><div class="label">Attrib. ROAS</div><div class="value tabular"><%= h.fmtRoas(l30.twRoas) %></div></div>
+      <div class="card kpi"><div class="label">Attributed ROAS</div><div class="value tabular"><%= h.fmtRoas(l30.twRoas) %></div></div>
       <div class="card kpi"><div class="label">NC ROAS</div><div class="value tabular"><%= h.fmtRoas(l30.ncRoas) %></div></div>
       <div class="card kpi"><div class="label">TOF share</div><div class="value tabular"><%= h.fmtPercent(l30.tofShare) %></div></div>
-      <div class="card kpi"><div class="label">New visitor %</div><div class="value tabular"><%= h.fmtPercent(l30.nvPct) %></div></div>
+      <div class="card kpi"><div class="label">New visitor rate</div><div class="value tabular"><%= h.fmtPercent(l30.nvPct) %></div></div>
     </div>
   </section>
 
   <section>
     <div class="section-head">
-      <h2>This week</h2>
+      <h2>Creative action list</h2>
       <% if (latest && latest.report_id) { %>
-        <a class="link-action" href="/reports">View report <%- h.icon('chevron-right') %></a>
+        <a class="link-action" href="/reports">Open weekly report <%- h.icon('chevron-right') %></a>
       <% } %>
     </div>
     <div class="grid cols-2">
       <div class="card">
-        <div class="card-header"><div class="card-title">New winners</div><div class="card-desc">J#### · open-entry title. Prior weekly run-rate under $2K, L7 spend at or above $10K.</div></div>
+        <div class="card-header"><div class="card-title">Scale candidates</div><div class="card-desc">New jobs with low prior spend and meaningful current-week delivery.</div></div>
         <div class="card-body list-tight">
           <% var winners = (snapshot.winners || []).slice(0, 5); %>
-          <% if (!winners.length) { %><p class="muted">None flagged this week.</p><% } %>
+          <% if (!winners.length) { %><p class="muted">No new scale candidates met the threshold this week.</p><% } %>
           <% winners.forEach(function(wn) { %>
             <div class="row-line">
               <span><strong><%= h.esc(h.truncate(wn.label, 48)) %></strong></span>
@@ -75,10 +75,10 @@
       </div>
 
       <div class="card">
-        <div class="card-header"><div class="card-title">Decelerators</div><div class="card-desc">J#### · open-entry title. Prior run-rate at or above $18K, L7 below 66% of prior.</div></div>
+        <div class="card-header"><div class="card-title">Delivery slowdowns</div><div class="card-desc">Jobs that previously carried spend but are materially down this week.</div></div>
         <div class="card-body list-tight">
           <% var decel = (snapshot.decelerators || []).slice(0, 5); %>
-          <% if (!decel.length) { %><p class="muted">None flagged this week.</p><% } %>
+          <% if (!decel.length) { %><p class="muted">No material delivery slowdowns met the threshold this week.</p><% } %>
           <% decel.forEach(function(dc) { %>
             <div class="row-line">
               <span><strong><%= h.esc(h.truncate(dc.label, 48)) %></strong></span>

@@ -31,6 +31,7 @@ export function renderMarkdown(src: string): string {
   const out: string[] = [];
   let i = 0;
   let inList = false;
+  let inQuote = false;
 
   const inline = (t: string) =>
     esc(t)
@@ -45,35 +46,66 @@ export function renderMarkdown(src: string): string {
     }
   };
 
+  const closeQuote = () => {
+    if (inQuote) {
+      out.push("</div>");
+      inQuote = false;
+    }
+  };
+
+  const closeBlocks = () => {
+    closeList();
+    closeQuote();
+  };
+
   while (i < lines.length) {
     const line = lines[i];
 
+    if (/^\s*---+\s*$/.test(line)) {
+      closeBlocks();
+      i++;
+      continue;
+    }
+
     // Table: header row followed by | --- | separator.
     if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
-      closeList();
+      closeBlocks();
       const cells = (r: string) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
       const header = cells(line);
-      out.push('<table><thead><tr>' + header.map((h) => `<th>${inline(h)}</th>`).join("") + "</tr></thead><tbody>");
+      out.push('<div class="table-wrap"><table><thead><tr>' + header.map((h) => `<th>${inline(h)}</th>`).join("") + "</tr></thead><tbody>");
       i += 2;
       while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
         const row = cells(lines[i]);
         out.push("<tr>" + row.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>");
         i++;
       }
-      out.push("</tbody></table>");
+      out.push("</tbody></table></div>");
       continue;
     }
 
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) {
-      closeList();
+      closeBlocks();
       const level = h[1].length;
-      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+      const text = h[2].replace(/^\d+\.\s+/, "");
+      out.push(`<h${level}>${inline(text)}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    if (/^>\s?/.test(line)) {
+      closeList();
+      if (!inQuote) {
+        out.push('<div class="report-callout">');
+        inQuote = true;
+      }
+      out.push(`<p>${inline(line.replace(/^>\s?/, ""))}</p>`);
       i++;
       continue;
     }
 
     if (/^\s*[-*]\s+/.test(line)) {
+      closeQuote();
       if (!inList) {
         out.push("<ul>");
         inList = true;
@@ -84,16 +116,16 @@ export function renderMarkdown(src: string): string {
     }
 
     if (line.trim() === "") {
-      closeList();
+      closeBlocks();
       i++;
       continue;
     }
 
-    closeList();
+    closeBlocks();
     out.push(`<p>${inline(line)}</p>`);
     i++;
   }
-  closeList();
+  closeBlocks();
   return out.join("\n");
 }
 
@@ -149,9 +181,9 @@ export const INTEGRATION_TEST: Record<string, { type: string; key?: string }> = 
 export const NAV = [
   { href: "/overview", label: "Overview", icon: "overview" },
   { href: "/creative-analysis", label: "Creative Analysis", icon: "layers" },
-  { href: "/winners", label: "Winners & Decelerators", icon: "trending" },
+  { href: "/winners", label: "Scale Signals", icon: "trending" },
   { href: "/reports", label: "Weekly Reports", icon: "file" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/settings", label: "Operations", icon: "settings" },
 ];
 
 /** Bundle passed to every view as `h`. */

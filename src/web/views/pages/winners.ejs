@@ -1,23 +1,23 @@
 <% if (!snapshot) { %>
   <div class="empty">
     <div class="ico"><%- h.icon('trending') %></div>
-    <h3>No analysis available</h3>
-    <p>Run a weekly sync or import data to detect winners and decelerators.</p>
+    <h3>No scale signals available</h3>
+    <p>Run the weekly report to identify new scale candidates and delivery slowdowns.</p>
   </div>
 <% } else { %>
   <div class="card">
     <div class="card-header">
-      <div class="card-title">New winners</div>
-      <div class="card-desc">Job name = J#### · open-entry title. Prior weekly run-rate &lt; $2K and L7 spend ≥ $10K. Excludes asc+ promo and catalog/Marpipe.</div>
+      <div class="card-title">Scale candidates</div>
+      <div class="card-desc">Jobs with low prior delivery that reached meaningful current-week spend. Promo, catalog, and Marpipe campaigns are excluded.</div>
     </div>
     <div class="card-body">
       <div class="table-wrap">
         <table class="data-table sortable">
           <thead><tr>
-            <th>Job</th><th data-type="num">L7 spend</th><th data-type="num">Meta ROAS</th><th data-type="num">Attrib. ROAS</th>
+            <th>Job</th><th data-type="num">L7 spend</th><th data-type="num">Meta ROAS</th><th data-type="num">Attributed ROAS</th>
           </tr></thead>
           <tbody>
-            <% if (!snapshot.winners.length) { %><tr><td colspan="4" class="muted">None flagged this week.</td></tr><% } %>
+            <% if (!snapshot.winners.length) { %><tr><td colspan="4" class="muted">No new scale candidates met the threshold this week.</td></tr><% } %>
             <% snapshot.winners.forEach(function(w) { %>
               <tr>
                 <td title="<%= h.esc(w.adName) %>"><strong><%= h.esc(w.label) %></strong></td>
@@ -34,17 +34,17 @@
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">Decelerators</div>
-      <div class="card-desc">Job name = J#### · open-entry title. Prior wk = L30-minus-L7 spend ÷ 23 × 7. Flags jobs where prior run-rate ≥ $18K and L7 fell below 66% of it.</div>
+      <div class="card-title">Delivery slowdowns</div>
+      <div class="card-desc">Jobs whose prior weekly run-rate was meaningful and whose current-week spend has materially dropped.</div>
     </div>
     <div class="card-body">
       <div class="table-wrap">
         <table class="data-table sortable">
           <thead><tr>
-            <th>Job</th><th data-type="num">Prior wk</th><th data-type="num">L7 spend</th><th data-type="num">% down</th><th data-type="num">Meta ROAS (L7)</th>
+            <th>Job</th><th data-type="num">Prior weekly run-rate</th><th data-type="num">L7 spend</th><th data-type="num">Decline</th><th data-type="num">Meta ROAS</th>
           </tr></thead>
           <tbody>
-            <% if (!snapshot.decelerators.length) { %><tr><td colspan="5" class="muted">None flagged this week.</td></tr><% } %>
+            <% if (!snapshot.decelerators.length) { %><tr><td colspan="5" class="muted">No material delivery slowdowns met the threshold this week.</td></tr><% } %>
             <% snapshot.decelerators.forEach(function(d) { %>
               <tr>
                 <td title="<%= h.esc(d.adName) %>"><strong><%= h.esc(d.label) %></strong></td>

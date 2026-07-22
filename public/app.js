@@ -313,20 +313,95 @@
       return esc(s).replace(/\*(.+?)\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>");
     }
     function renderMd(src) {
-      return esc(src)
-        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-        .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/^- (.+)$/gm, "<li>$1</li>")
-        .replace(/(<li>.*<\/li>\n?)+/g, function (m) {
-          return "<ul>" + m + "</ul>";
-        })
-        .replace(/\n\n/g, "</p><p>")
-        .replace(/^(.+)$/gm, function (line) {
-          if (/^<[hul]/.test(line)) return line;
-          return line ? "<p>" + line + "</p>" : "";
+      const lines = String(src || "").replace(/\r\n/g, "\n").split("\n");
+      const out = [];
+      let i = 0;
+      let inList = false;
+      let inQuote = false;
+      function inline(t) {
+        return esc(t)
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, "$1<em>$2</em>")
+          .replace(/`([^`]+?)`/g, "<code>$1</code>");
+      }
+      function closeList() {
+        if (inList) {
+          out.push("</ul>");
+          inList = false;
+        }
+      }
+      function closeQuote() {
+        if (inQuote) {
+          out.push("</div>");
+          inQuote = false;
+        }
+      }
+      function closeBlocks() {
+        closeList();
+        closeQuote();
+      }
+      function cells(row) {
+        return row.trim().replace(/^\||\|$/g, "").split("|").map(function (c) {
+          return c.trim();
         });
+      }
+      while (i < lines.length) {
+        const line = lines[i];
+        if (/^\s*---+\s*$/.test(line)) {
+          closeBlocks();
+          i++;
+          continue;
+        }
+        if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+          closeBlocks();
+          out.push('<div class="table-wrap"><table><thead><tr>' + cells(line).map(function (h) { return "<th>" + inline(h) + "</th>"; }).join("") + "</tr></thead><tbody>");
+          i += 2;
+          while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+            out.push("<tr>" + cells(lines[i]).map(function (c) { return "<td>" + inline(c) + "</td>"; }).join("") + "</tr>");
+            i++;
+          }
+          out.push("</tbody></table></div>");
+          continue;
+        }
+        const h = line.match(/^(#{1,4})\s+(.*)$/);
+        if (h) {
+          closeBlocks();
+          const level = h[1].length;
+          out.push("<h" + level + ">" + inline(h[2].replace(/^\d+\.\s+/, "")) + "</h" + level + ">");
+          i++;
+          continue;
+        }
+        if (/^>\s?/.test(line)) {
+          closeList();
+          if (!inQuote) {
+            out.push('<div class="report-callout">');
+            inQuote = true;
+          }
+          out.push("<p>" + inline(line.replace(/^>\s?/, "")) + "</p>");
+          i++;
+          continue;
+        }
+        if (/^\s*[-*]\s+/.test(line)) {
+          closeQuote();
+          if (!inList) {
+            out.push("<ul>");
+            inList = true;
+          }
+          out.push("<li>" + inline(line.replace(/^\s*[-*]\s+/, "")) + "</li>");
+          i++;
+          continue;
+        }
+        if (line.trim() === "") {
+          closeBlocks();
+          i++;
+          continue;
+        }
+        closeBlocks();
+        out.push("<p>" + inline(line) + "</p>");
+        i++;
+      }
+      closeBlocks();
+      return out.join("\n");
     }
 
     $$(".report-item").forEach(function (btn) {

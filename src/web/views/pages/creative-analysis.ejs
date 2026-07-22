@@ -1,31 +1,31 @@
 <%
 function groupTable(rows, labelHeader, shareHeader, shareField, withThumb, drillOpts) {
-  shareHeader = shareHeader || 'TOF sh.';
+  shareHeader = shareHeader || 'TOF share';
   shareField = shareField || 'tofShare';
   drillOpts = drillOpts || null;
   var colCount = (withThumb ? 8 : 7) + (drillOpts ? 1 : 0);
 %>
   <div class="table-block<%= drillOpts ? ' drill-table' : '' %>">
-    <% if (drillOpts) { %><p class="table-hint">Use <strong>View demo</strong> on a row to expand creator demo (013) breakdown for that <%= drillOpts.dimLabel %>.</p><% } %>
+    <% if (drillOpts) { %><p class="table-hint">Use <strong>View demo</strong> to see which on-camera talent segments are driving spend for this <%= drillOpts.dimLabel %>.</p><% } %>
     <div class="table-wrap">
     <table class="data-table sortable<%= drillOpts ? ' drillable' : '' %>"<% if (drillOpts) { %> data-drill-cols="<%= colCount %>"<% } %>>
       <thead>
         <tr>
           <th data-type="text"><%= labelHeader %></th>
-          <th class="no-sort">W/L</th>
+          <th class="no-sort">Delivery</th>
           <th data-type="num">Spend</th>
           <th data-type="num">$/Ad</th>
           <th data-type="num"><%= shareHeader %></th>
-          <% if (withThumb) { %><th data-type="num" title="3-second video plays ÷ impressions">3s Thumb</th><% } %>
-          <th data-type="num">NV %</th>
+          <% if (withThumb) { %><th data-type="num" title="3-second video plays divided by impressions">Thumbstop</th><% } %>
+          <th data-type="num">New visitor %</th>
           <th data-type="num">Meta ROAS</th>
-          <th data-type="num">Attrib. ROAS</th>
+          <th data-type="num">Attributed ROAS</th>
           <% if (drillOpts) { %><th class="no-sort drill-col">Demo</th><% } %>
         </tr>
       </thead>
       <tbody>
-        <% if (!rows || !rows.length) { %>
-          <tr><td colspan="<%= colCount %>" class="muted">No coded spend in this window.</td></tr>
+            <% if (!rows || !rows.length) { %>
+          <tr><td colspan="<%= colCount %>" class="muted">No eligible coded spend in this window.</td></tr>
         <% } %>
         <% (rows || []).forEach(function(r) { %>
           <tr
@@ -48,7 +48,7 @@ function groupTable(rows, labelHeader, shareHeader, shareField, withThumb, drill
             <td class="tabular" data-sort="<%= r.twRoas %>"><%= h.fmtRoas(r.twRoas) %></td>
             <% if (drillOpts) { %>
               <td class="drill-col">
-                <button type="button" class="btn ghost sm drill-view-btn" aria-expanded="false">View demo</button>
+                <button type="button" class="btn ghost sm drill-view-btn" aria-expanded="false">View mix</button>
               </td>
             <% } %>
           </tr>
@@ -65,10 +65,10 @@ function creatorTable(rows) {
   <div class="table-wrap">
     <table class="data-table sortable">
       <thead><tr>
-        <th>Creator</th><th>Type</th><th data-type="num">Spend</th><th data-type="num">Assets</th><th data-type="num">Meta ROAS</th><th data-type="num">Attrib. ROAS</th><th data-type="num">NV %</th>
+        <th>Creator</th><th>Type</th><th data-type="num">Spend</th><th data-type="num">Assets</th><th data-type="num">Meta ROAS</th><th data-type="num">Attributed ROAS</th><th data-type="num">New visitor %</th>
       </tr></thead>
       <tbody>
-        <% if (!rows || !rows.length) { %><tr><td colspan="7" class="muted">No whitelisted creator attribution in this window.</td></tr><% } %>
+        <% if (!rows || !rows.length) { %><tr><td colspan="7" class="muted">No creator-attributed spend in this window.</td></tr><% } %>
         <% (rows || []).forEach(function(c) { %>
           <tr>
             <td><strong><%= h.esc(c.creator) %></strong></td>
@@ -91,10 +91,10 @@ function scriptTable(rows) {
   <div class="table-wrap">
     <table class="data-table sortable">
       <thead><tr>
-        <th>Script</th><th data-type="num">Iter. jobs</th><th class="no-sort">W/L</th><th data-type="num">Spend</th><th data-type="num">$/job</th><th data-type="num">TOF sh.</th><th data-type="num">NV %</th><th data-type="num">Meta</th><th data-type="num">Attrib.</th>
+        <th>Script</th><th data-type="num">Jobs</th><th class="no-sort">Delivery</th><th data-type="num">Spend</th><th data-type="num">Spend / job</th><th data-type="num">TOF share</th><th data-type="num">New visitor %</th><th data-type="num">Meta ROAS</th><th data-type="num">Attributed ROAS</th>
       </tr></thead>
       <tbody>
-        <% if (!rows || !rows.length) { %><tr><td colspan="9" class="muted">No script grouping in this window.</td></tr><% } %>
+        <% if (!rows || !rows.length) { %><tr><td colspan="9" class="muted">No script-level grouping in this window.</td></tr><% } %>
         <% (rows || []).forEach(function(s) { %>
           <tr>
             <td><strong><%= h.esc(s.scriptStem) %></strong></td>
@@ -116,16 +116,16 @@ function scriptTable(rows) {
 <% if (!snapshot) { %>
   <div class="empty">
     <div class="ico"><%- h.icon('layers') %></div>
-    <h3>No analysis available</h3>
-    <p>Run a weekly sync or import a Meta export to generate element breakouts.</p>
+    <h3>No creative analysis available</h3>
+    <p>Run the weekly report to generate element, script, and creator performance breakouts.</p>
   </div>
 <% } else { %>
-  <div class="banner note">Element breakouts apply only to ads following the naming convention (J#### job codes, fields 000–016). Ignore rows from legacy or malformed ad names — they may produce meaningless tags.</div>
+  <div class="banner note">Element breakouts include only ads with readable creative naming fields. Legacy or malformed names are excluded from decision-making sections so the tables stay actionable.</div>
 
   <div class="grid kpi-row">
     <div class="card kpi"><div class="label">Spend (L7)</div><div class="value tabular"><%= h.fmtCurrency(snapshot.topline.l7.spend, { compact: true }) %></div></div>
     <div class="card kpi"><div class="label">Meta ROAS</div><div class="value tabular"><%= h.fmtRoas(snapshot.topline.l7.metaRoas) %></div></div>
-    <div class="card kpi"><div class="label">Attrib. ROAS</div><div class="value tabular"><%= h.fmtRoas(snapshot.topline.l7.twRoas) %></div></div>
+    <div class="card kpi"><div class="label">Attributed ROAS</div><div class="value tabular"><%= h.fmtRoas(snapshot.topline.l7.twRoas) %></div></div>
     <div class="card kpi"><div class="label">TOF Share</div><div class="value tabular"><%= h.fmtPercent(snapshot.topline.l7.tofShare) %></div></div>
   </div>
 
@@ -136,33 +136,33 @@ function scriptTable(rows) {
         <button type="button" class="tab" data-tab="opener">Opener (005)</button>
         <button type="button" class="tab" data-tab="color">Color (007/004)</button>
         <button type="button" class="tab" data-tab="demo">Creator Demo (013)</button>
-        <button type="button" class="tab" data-tab="creator">Creator (WL)</button>
+    <button type="button" class="tab" data-tab="creator">Creator Performance</button>
         <button type="button" class="tab" data-tab="script">Script Iteration</button>
       </div>
 
       <div class="tab-panel active" data-panel="category">
         <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
-        <%- groupTable(snapshot.l7.categories, 'Category', 'TOF sh.', 'tofShare', false, { dim: 'categories', dimLabel: 'category', window: 'l7' }) %>
+        <%- groupTable(snapshot.l7.categories, 'Category', 'TOF share', 'tofShare', false, { dim: 'categories', dimLabel: 'category', window: 'l7' }) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
-        <%- groupTable(snapshot.l30.categories, 'Category', 'TOF sh.', 'tofShare', false, { dim: 'categories', dimLabel: 'category', window: 'l30' }) %>
+        <%- groupTable(snapshot.l30.categories, 'Category', 'TOF share', 'tofShare', false, { dim: 'categories', dimLabel: 'category', window: 'l30' }) %>
       </div>
 
       <div class="tab-panel" data-panel="opener">
         <h4 class="win-head">L7 · <%= windows && windows.l7 %> — top 15</h4>
-        <%- groupTable(snapshot.l7.openers, 'Opener', 'TOF sh.', 'tofShare', true, { dim: 'openers', dimLabel: 'opener', window: 'l7' }) %>
+        <%- groupTable(snapshot.l7.openers, 'Opener', 'TOF share', 'tofShare', true, { dim: 'openers', dimLabel: 'opener', window: 'l7' }) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %> — top 15</h4>
-        <%- groupTable(snapshot.l30.openers, 'Opener', 'TOF sh.', 'tofShare', true, { dim: 'openers', dimLabel: 'opener', window: 'l30' }) %>
+        <%- groupTable(snapshot.l30.openers, 'Opener', 'TOF share', 'tofShare', true, { dim: 'openers', dimLabel: 'opener', window: 'l30' }) %>
       </div>
 
       <div class="tab-panel" data-panel="color">
         <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
-        <%- groupTable(snapshot.l7.colors, 'Color', 'TOF sh.', 'tofShare', false, { dim: 'colors', dimLabel: 'color', window: 'l7' }) %>
+        <%- groupTable(snapshot.l7.colors, 'Color', 'TOF share', 'tofShare', false, { dim: 'colors', dimLabel: 'color', window: 'l7' }) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
-        <%- groupTable(snapshot.l30.colors, 'Color', 'TOF sh.', 'tofShare', false, { dim: 'colors', dimLabel: 'color', window: 'l30' }) %>
+        <%- groupTable(snapshot.l30.colors, 'Color', 'TOF share', 'tofShare', false, { dim: 'colors', dimLabel: 'color', window: 'l30' }) %>
       </div>
 
       <div class="tab-panel" data-panel="demo">
-        <p class="muted tab-panel-note">On-camera talent only; statics excluded. <strong>Share</strong> = share of demo-coded spend.</p>
+        <p class="muted tab-panel-note">On-camera talent segments only. Share is calculated against demo-coded spend in the selected window.</p>
         <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
         <%- groupTable(snapshot.l7.demographics, 'Demo', 'Share', 'share', false) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
@@ -170,7 +170,7 @@ function scriptTable(rows) {
       </div>
 
       <div class="tab-panel" data-panel="creator">
-        <p class="muted tab-panel-note">Whitelisted ads only, attributed by the open-entry creator name.</p>
+        <p class="muted tab-panel-note">Creator spend is attributed from the open-entry name when the creative naming convention supports it.</p>
         <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
         <%- creatorTable(snapshot.l7.creators) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
@@ -178,7 +178,7 @@ function scriptTable(rows) {
       </div>
 
       <div class="tab-panel" data-panel="script">
-        <p class="muted tab-panel-note">One job = one concept; copies, sizes, colours collapsed. Catalog / Marpipe excluded.</p>
+        <p class="muted tab-panel-note">One job equals one creative concept; ad-set copies, sizes, and color variants are collapsed for cleaner readouts.</p>
         <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
         <%- scriptTable(snapshot.l7.scripts) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>

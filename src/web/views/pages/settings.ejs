@@ -3,31 +3,31 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <div class="card-title">Data sync</div>
-      <div class="card-desc">Pull ad-level Meta metrics and attribution data, merge by Ad ID, analyze, and generate the weekly report.</div>
+      <div class="card-title">Reporting pipeline</div>
+      <div class="card-desc">Pull Meta and attribution data, merge by Ad ID, analyze creative performance, and prepare the weekly report.</div>
     </div>
   </div>
   <div class="card-body source-card">
     <div class="source-block">
-      <h4><%- h.icon('play') %> Weekly sync</h4>
-      <p>Fetches Meta ad-level insights (spend, purchases, 3-second video views) and pixel-attributed metrics per ad. Results are merged, analyzed, and stored for reporting.</p>
+      <h4><%- h.icon('play') %> Weekly report run</h4>
+      <p>Builds the full reporting dataset: Meta delivery, attribution performance, merged creative rows, analysis snapshots, and the client-ready report.</p>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn sm" data-job="weeklyFullRun" data-post-slack="true"><%- h.icon('play') %> Run sync &amp; post to Slack</button>
-        <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Sync Meta only</button>
-        <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Sync attribution only</button>
+        <button type="button" class="btn sm" data-job="weeklyFullRun" data-post-slack="true"><%- h.icon('play') %> Run and send report</button>
+        <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Refresh Meta data</button>
+        <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Refresh attribution</button>
       </div>
     </div>
     <div class="source-block">
-      <h4><%- h.icon('upload') %> File import</h4>
-      <p>Upload a Meta Ads Manager CSV or XLSX export to validate parser output and report layout against a known sheet.</p>
-      <a class="link-action" href="#file-import" style="margin-top:12px;display:inline-flex">Go to file import <%- h.icon('chevron-right') %></a>
+      <h4><%- h.icon('upload') %> Manual file import</h4>
+      <p>Use a Meta export when you need to validate naming, parser output, or a specific historical sheet outside the scheduled sync.</p>
+      <a class="link-action" href="#file-import" style="margin-top:12px;display:inline-flex">Open file import <%- h.icon('chevron-right') %></a>
     </div>
   </div>
 </div>
 
 <div class="grid two">
   <div class="card">
-    <div class="card-header"><div class="card-title">Connections</div><div class="card-desc">Integration status and connection tests.</div></div>
+    <div class="card-header"><div class="card-title">Connections</div><div class="card-desc">Confirm each data source is configured and reachable before running a report.</div></div>
     <div class="card-body list-tight">
       <% integrations.forEach(function(i) { %>
         <% var test = h.INTEGRATION_TEST[i.key]; %>
@@ -48,7 +48,7 @@
   </div>
 
   <div class="card">
-    <div class="card-header"><div class="card-title">Brand accounts</div><div class="card-desc">Meta ad accounts and attribution stores mapped to each brand.</div></div>
+    <div class="card-header"><div class="card-title">Brand account map</div><div class="card-desc">The Meta accounts and attribution stores used for each brand report.</div></div>
     <div class="card-body list-tight">
       <% (topology.brands || []).forEach(function(b) { %>
         <div style="padding:12px 0;border-bottom:1px solid var(--border)">
@@ -63,15 +63,15 @@
 
 <div class="card" id="file-import">
   <div class="card-header">
-    <div class="card-title">File import</div>
-    <div class="card-desc">Upload a Meta Ads Manager CSV or XLSX export (ad-level, with Ad ID column).</div>
+    <div class="card-title">Manual file import</div>
+    <div class="card-desc">Upload an ad-level Meta export when you need an offline or historical validation run.</div>
   </div>
   <div class="card-body">
     <form id="import-form" enctype="multipart/form-data">
       <div class="dropzone" id="dropzone">
         <div class="dz-icon"><%- h.icon('upload') %></div>
         <p><strong>Drop a Meta export</strong> or click to browse</p>
-        <p class="muted" style="font-size:12px;margin-top:6px">CSV or XLSX · ad-level rows with Ad ID</p>
+        <p class="muted" style="font-size:12px;margin-top:6px">CSV or XLSX with ad-level rows and Ad ID</p>
         <input type="file" name="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none"/>
       </div>
       <div class="form-row" style="margin-top:14px">
@@ -89,18 +89,18 @@
             <option value="L30">L30</option>
           </select>
         </div>
-        <button type="submit" class="btn" id="import-btn" disabled><%- h.icon('upload') %> Import and analyze</button>
+        <button type="submit" class="btn" id="import-btn" disabled><%- h.icon('upload') %> Import and analyze file</button>
       </div>
     </form>
   </div>
 </div>
 
 <div class="card">
-  <div class="card-header"><div class="card-title">Pipeline steps</div><div class="card-desc">Run individual steps against the current or latest sync run.</div></div>
+  <div class="card-header"><div class="card-title">Pipeline controls</div><div class="card-desc">Run a full report or refresh an individual stage when troubleshooting data quality.</div></div>
   <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px">
-    <button type="button" class="btn outline sm" data-job="weeklyFullRun" data-post-slack="false"><%- h.icon('play') %> Full weekly sync</button>
-    <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Sync Meta</button>
-    <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Sync attribution</button>
+    <button type="button" class="btn outline sm" data-job="weeklyFullRun" data-post-slack="false"><%- h.icon('play') %> Build report without Slack</button>
+    <button type="button" class="btn outline sm" data-job="syncMetaWindow"><%- h.icon('refresh') %> Refresh Meta</button>
+    <button type="button" class="btn outline sm" data-job="syncTripleWhaleWindow"><%- h.icon('refresh') %> Refresh attribution</button>
     <button type="button" class="btn outline sm" data-job="mergeCreativeData"><%- h.icon('layers') %> Merge</button>
     <button type="button" class="btn outline sm" data-job="computeCreativeAnalysis"><%- h.icon('chart') %> Analyze</button>
     <button type="button" class="btn outline sm" data-job="generateWeeklyAIReport"><%- h.icon('sparkles') %> Generate report</button>
@@ -109,23 +109,23 @@
 
 <div class="card" id="raw-data">
   <div class="card-header">
-    <div class="card-title">Raw data</div>
-    <div class="card-desc">Inspect ad-level Meta, attribution, and merged rows from the latest sync.</div>
+    <div class="card-title">Source data audit</div>
+    <div class="card-desc">Review the Meta, attribution, and merged rows behind the latest report.</div>
   </div>
   <div class="card-body">
     <% if (latest) { %>
-      <a class="link-action" href="/raw-data">Open raw data <%- h.icon('chevron-right') %></a>
+      <a class="link-action" href="/raw-data">Open source data <%- h.icon('chevron-right') %></a>
       <span class="muted" style="margin-left:12px;font-size:12px">Run <code><%= h.esc(latest.id.slice(0,8)) %></code></span>
     <% } else { %>
-      <p class="muted">No sync run yet. Run a weekly sync or import a file first.</p>
+      <p class="muted">No report run yet. Run the weekly report or import a file first.</p>
     <% } %>
   </div>
 </div>
 
 <div class="card" id="run-history">
   <div class="card-header">
-    <div class="card-title">Sync history</div>
-    <div class="card-desc">Past weekly sync runs and their status.</div>
+    <div class="card-title">Run history</div>
+    <div class="card-desc">Recent report runs, completion status, and final spend totals.</div>
   </div>
   <div class="card-body">
     <div class="table-wrap">
@@ -151,8 +151,8 @@
 
 <div class="card" id="job-logs">
   <div class="card-header">
-    <div class="card-title">Job logs</div>
-    <div class="card-desc">Execution traces and errors for individual pipeline steps.</div>
+    <div class="card-title">Operational logs</div>
+    <div class="card-desc">Step-level messages for debugging data pulls, merges, reports, and Slack delivery.</div>
   </div>
   <div class="card-body">
     <div class="table-wrap table-scroll">

@@ -20,7 +20,7 @@ export const pagesRouter = Router();
 
 const runWeeklyBtn =
   '<button type="button" class="btn" data-job="weeklyFullRun" data-post-slack="true">' +
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:15px;height:15px"><polygon points="6 3 20 12 6 21 6 3"/></svg> Run weekly sync</button>';
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:15px;height:15px"><polygon points="6 3 20 12 6 21 6 3"/></svg> Run weekly report</button>';
 
 function toplineFallback(window: "L7" | "L30"): ToplineMetrics {
   return { window, spend: 0, creatives: 0, metaRoas: 0, twRoas: 0, ncRoas: 0, tofShare: 0, nvPct: 0, revenue: 0, attributedRevenue: 0, purchases: 0 };
@@ -35,7 +35,7 @@ pagesRouter.get("/overview", async (_req, res, next) => {
     const snapshot = latest ? await getSnapshot(latest.id) : null;
     renderPage(res, "overview", {
       title: "Overview",
-      subtitle: "Account topline · L7 and L30 performance windows",
+      subtitle: "Executive performance snapshot across spend, revenue, and creative delivery",
       actions: runWeeklyBtn,
       status,
       latest,
@@ -58,8 +58,8 @@ pagesRouter.get("/creative-analysis", async (_req, res, next) => {
     const snapshot = latest ? await getSnapshot(latest.id) : null;
     renderPage(res, "creative-analysis", {
       title: "Creative Analysis",
-      subtitle: "Element breakouts by naming-convention fields",
-      actions: '<button type="button" class="btn outline" data-job="computeCreativeAnalysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg> Recompute</button>',
+      subtitle: "Performance by creative element, script, talent, and weekly window",
+      actions: '<button type="button" class="btn outline" data-job="computeCreativeAnalysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg> Refresh analysis</button>',
       status,
       snapshot,
       windows: { l7: prettyWindow(last7()), l30: prettyWindow(last30()) },
@@ -76,7 +76,7 @@ pagesRouter.get("/winners", async (_req, res, next) => {
     const snapshot = latest ? await getSnapshot(latest.id) : null;
     renderPage(res, "winners", {
       title: "Winners & Decelerators",
-      subtitle: "Job-level scale signals · L7 vs prior weekly run-rate",
+      subtitle: "Job-level scale opportunities and delivery slowdowns to act on this week",
       actions: "",
       status,
       snapshot,
@@ -94,7 +94,7 @@ pagesRouter.get("/raw-data", async (_req, res, next) => {
     if (!latest) {
       return renderPage(res, "raw-data", {
         title: "Raw Data",
-        subtitle: "Ad-level rows behind the latest sync run",
+        subtitle: "Audit the ad-level rows behind the latest reporting run",
         actions: "",
         status,
         latest: null,
@@ -111,7 +111,7 @@ pagesRouter.get("/raw-data", async (_req, res, next) => {
     ]);
     renderPage(res, "raw-data", {
       title: "Raw Data",
-      subtitle: `Sync run ${latest.id.slice(0, 8)} · ad-level export`,
+      subtitle: `Latest run ${latest.id.slice(0, 8)} · source rows and merged output`,
       actions: "",
       status,
       latest,
@@ -128,7 +128,7 @@ pagesRouter.get("/reports", async (req, res, next) => {
     const reports = await getReports(50);
     renderPage(res, "reports", {
       title: "Weekly Reports",
-      subtitle: "Generated markdown reports and Slack summaries",
+      subtitle: "Client-ready weekly narratives, topline tables, and Slack summaries",
       actions: "",
       status,
       reports,
@@ -145,7 +145,7 @@ pagesRouter.get("/settings", async (_req, res, next) => {
     const [runs, logs, latest] = await Promise.all([getRuns(25), getLogs({ limit: 200 }), getLatestRun()]);
     renderPage(res, "settings", {
       title: "Settings",
-      subtitle: "Data sync · integrations · import · run history",
+      subtitle: "Manage data sources, pipeline runs, imports, and operational checks",
       actions: runWeeklyBtn,
       status,
       integrations: envHealth(),

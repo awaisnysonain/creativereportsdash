@@ -1,19 +1,19 @@
 <% if (!latest || !data) { %>
   <div class="empty">
     <div class="ico"><%- h.icon('database') %></div>
-    <h3>No raw data</h3>
-    <p>Run a weekly sync or import a Meta export to explore ad-level rows.</p>
+    <h3>No source data available</h3>
+    <p>Run the weekly report or import a Meta export to review ad-level source rows.</p>
   </div>
 <% } else { %>
   <div class="card">
     <div class="card-body">
       <div class="tabs" data-tabs="raw">
-        <button type="button" class="tab active" data-tab="meta-l7">Meta · L7</button>
-        <button type="button" class="tab" data-tab="meta-l30">Meta · L30</button>
-        <button type="button" class="tab" data-tab="tw-l7">Attribution · L7</button>
-        <button type="button" class="tab" data-tab="tw-l30">Attribution · L30</button>
-        <button type="button" class="tab" data-tab="merged-l7">Merged · L7</button>
-        <button type="button" class="tab" data-tab="merged-l30">Merged · L30</button>
+        <button type="button" class="tab active" data-tab="meta-l7">Meta source · L7</button>
+        <button type="button" class="tab" data-tab="meta-l30">Meta source · L30</button>
+        <button type="button" class="tab" data-tab="tw-l7">Attribution source · L7</button>
+        <button type="button" class="tab" data-tab="tw-l30">Attribution source · L30</button>
+        <button type="button" class="tab" data-tab="merged-l7">Merged output · L7</button>
+        <button type="button" class="tab" data-tab="merged-l30">Merged output · L30</button>
       </div>
 
       <% const panels = [
