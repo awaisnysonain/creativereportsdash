@@ -34,6 +34,7 @@ const rawSchema = z.object({
   // Slack
   SLACK_BOT_TOKEN: z.string().optional().default(""),
   SLACK_CHANNEL_ID: z.string().optional().default(""),
+  SLACK_REPORT_USER_IDS: z.string().optional().default(""),
 
   // Reporting / scheduling
   REPORT_TIMEZONE: z.string().optional().default("America/New_York"),
@@ -100,7 +101,9 @@ export function envHealth(): IntegrationHealth[] {
       key: "slack",
       label: "Slack",
       configured: has(env.SLACK_BOT_TOKEN) && has(env.SLACK_CHANNEL_ID),
-      detail: has(env.SLACK_CHANNEL_ID) ? `channel: ${env.SLACK_CHANNEL_ID}` : "token/channel missing",
+      detail: has(env.SLACK_CHANNEL_ID)
+        ? `channel: ${env.SLACK_CHANNEL_ID}${has(env.SLACK_REPORT_USER_IDS) ? " + direct users" : ""}`
+        : "token/channel missing",
     },
     {
       key: "meta_nobl",

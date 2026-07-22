@@ -15,7 +15,7 @@ console.log(`Parsed L7=${l7.rows.length} ads, L30=${l30.rows.length} ads`);
 const mergedL7 = mergeCreativeMetrics(l7.rows, [], "L7", "NOBL");
 const mergedL30 = mergeCreativeMetrics(l30.rows, [], "L30", "NOBL");
 
-const snap = buildAnalysisSnapshot({ l7: mergedL7, l30: mergedL30 });
+const snap = buildAnalysisSnapshot({ l7: mergedL7, previousL7: mergedL7, previous2L7: mergedL7, l30: mergedL30 });
 
 console.log("\n── TOPLINE L7 ─────────────────────────");
 const t = snap.topline.l7;

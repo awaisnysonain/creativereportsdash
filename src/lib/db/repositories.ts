@@ -3,6 +3,7 @@ import type {
   AnalysisSnapshot,
   MergedCreativeMetric,
   MetaAdMetric,
+  ReportWindow,
   TripleWhaleAdMetric,
 } from "@/types";
 import { shortId } from "@/lib/utils";
@@ -119,7 +120,7 @@ export async function latestSuccessfulRun(): Promise<SyncRunRow | null> {
 
 export async function insertMetaMetrics(
   runId: string,
-  window: "L7" | "L30",
+  window: ReportWindow,
   rows: MetaAdMetric[],
 ): Promise<number> {
   if (!rows.length) return 0;
@@ -147,7 +148,7 @@ export async function insertMetaMetrics(
 
 export async function insertTwMetrics(
   runId: string,
-  window: "L7" | "L30",
+  window: ReportWindow,
   rows: TripleWhaleAdMetric[],
 ): Promise<number> {
   if (!rows.length) return 0;
@@ -173,7 +174,7 @@ export async function insertTwMetrics(
 
 export async function insertMergedMetrics(
   runId: string,
-  window: "L7" | "L30",
+  window: ReportWindow,
   rows: MergedCreativeMetric[],
 ): Promise<number> {
   if (!rows.length) return 0;
@@ -229,7 +230,7 @@ export interface MergedRow {
   parsed: unknown;
 }
 
-export async function getMergedForRun(runId: string, window?: "L7" | "L30"): Promise<MergedRow[]> {
+export async function getMergedForRun(runId: string, window?: ReportWindow): Promise<MergedRow[]> {
   if (window) {
     return query<MergedRow>(
       `SELECT * FROM merged_creative_metrics WHERE run_id = $1 AND "window" = $2 ORDER BY spend DESC`,
@@ -239,13 +240,13 @@ export async function getMergedForRun(runId: string, window?: "L7" | "L30"): Pro
   return query<MergedRow>(`SELECT * FROM merged_creative_metrics WHERE run_id = $1 ORDER BY spend DESC`, [runId]);
 }
 
-export async function getMetaRowsForRun(runId: string, window?: "L7" | "L30") {
+export async function getMetaRowsForRun(runId: string, window?: ReportWindow) {
   const clause = window ? `AND "window" = $2` : "";
   const params = window ? [runId, window] : [runId];
   return query(`SELECT * FROM meta_ad_metrics WHERE run_id = $1 ${clause} ORDER BY spend DESC`, params);
 }
 
-export async function getTwRowsForRun(runId: string, window?: "L7" | "L30") {
+export async function getTwRowsForRun(runId: string, window?: ReportWindow) {
   const clause = window ? `AND "window" = $2` : "";
   const params = window ? [runId, window] : [runId];
   return query(`SELECT * FROM triple_whale_ad_metrics WHERE run_id = $1 ${clause} ORDER BY spend DESC`, params);

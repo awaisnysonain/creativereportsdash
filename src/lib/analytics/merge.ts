@@ -1,4 +1,4 @@
-import type { MergedCreativeMetric, MetaAdMetric, TripleWhaleAdMetric, WinLoss } from "@/types";
+import type { MergedCreativeMetric, MetaAdMetric, ReportWindow, TripleWhaleAdMetric, WinLoss } from "@/types";
 import { parseCreativeName } from "@/lib/parser/creative-name-parser";
 import { campaignFunnel } from "./campaign-rules";
 import { safeDiv } from "@/lib/utils";
@@ -48,7 +48,7 @@ interface NameGroup {
 export function mergeCreativeMetrics(
   meta: MetaAdMetric[],
   tw: TripleWhaleAdMetric[],
-  window: "L7" | "L30",
+  window: ReportWindow,
   brand: BrandKey,
 ): MergedCreativeMetric[] {
   // 1) Aggregate Triple Whale by ad_id.

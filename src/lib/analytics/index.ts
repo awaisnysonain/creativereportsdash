@@ -6,6 +6,7 @@ import type {
   GroupBreakout,
   MergedCreativeMetric,
   ParsedCreative,
+  ReportWindow,
   ScriptBreakout,
   ToplineMetrics,
   WindowedBreakouts,
@@ -93,7 +94,7 @@ function tofSpendOf(rows: MergedCreativeMetric[]): number {
   return rows.filter((r) => r.parsed.funnel === "TOF").reduce((a, r) => a + r.spend, 0);
 }
 
-export function computeTopline(rows: MergedCreativeMetric[], window: "L7" | "L30"): ToplineMetrics {
+export function computeTopline(rows: MergedCreativeMetric[], window: ReportWindow): ToplineMetrics {
   const spend = rows.reduce((a, r) => a + r.spend, 0);
   const revenue = sum(rows, (r) => r.purchaseValue);
   const attributedRevenue = sum(rows, (r) => r.attributedRevenue);
@@ -563,6 +564,8 @@ export function computeWinnersAndDecelerators(
 
 export interface BuildSnapshotInput {
   l7: MergedCreativeMetric[];
+  previousL7: MergedCreativeMetric[];
+  previous2L7: MergedCreativeMetric[];
   l30: MergedCreativeMetric[];
 }
 
@@ -584,10 +587,15 @@ function windowedBreakouts(rows: MergedCreativeMetric[]): WindowedBreakouts {
 }
 
 export function buildAnalysisSnapshot(input: BuildSnapshotInput): AnalysisSnapshot {
-  const { l7, l30 } = input;
+  const { l7, previousL7, previous2L7, l30 } = input;
   const { winners, decelerators } = computeWinnersAndDecelerators(l7, l30);
   return {
-    topline: { l7: computeTopline(l7, "L7"), l30: computeTopline(l30, "L30") },
+    topline: {
+      l7: computeTopline(l7, "L7"),
+      previousL7: computeTopline(previousL7, "PRIOR_L7"),
+      previous2L7: computeTopline(previous2L7, "PRIOR_2L7"),
+      l30: computeTopline(l30, "L30"),
+    },
     l7: windowedBreakouts(l7),
     l30: windowedBreakouts(l30),
     winners,

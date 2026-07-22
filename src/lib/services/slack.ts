@@ -11,6 +11,7 @@ export interface SlackPostInput {
   slackSummary: string;
   reportUrl?: string;
   channelId?: string;
+  userIds?: string[];
 }
 
 export interface SlackPostResult {
@@ -24,6 +25,13 @@ export interface SlackPostResult {
 function client(): WebClient | null {
   if (!env.SLACK_BOT_TOKEN) return null;
   return new WebClient(env.SLACK_BOT_TOKEN);
+}
+
+function reportUserIds(input?: string): string[] {
+  return (input ?? env.SLACK_REPORT_USER_IDS)
+    .split(/[\s,]+/)
+    .map((id) => id.trim())
+    .filter(Boolean);
 }
 
 /** Build Slack Block Kit blocks for a polished message. */
@@ -60,17 +68,22 @@ function buildBlocks(input: SlackPostInput) {
 
 export async function postReportToSlack(input: SlackPostInput): Promise<SlackPostResult> {
   const channelId = input.channelId || env.SLACK_CHANNEL_ID;
+  const userIds = input.userIds ?? reportUserIds();
   const slack = client();
   if (!slack) {
     return { ok: false, channelId, error: "SLACK_BOT_TOKEN not configured" };
   }
-  if (!channelId) {
+  if (!channelId && userIds.length === 0) {
     return { ok: false, channelId: "", error: "SLACK_CHANNEL_ID not configured" };
   }
+  const slackClient = slack;
 
-  try {
-    const res = await slack.chat.postMessage({
-      channel: channelId,
+  const posted: SlackPostResult[] = [];
+  const failed: SlackPostResult[] = [];
+
+  async function postToChannel(destChannelId: string): Promise<SlackPostResult> {
+    const res = await slackClient.chat.postMessage({
+      channel: destChannelId,
       text: input.title, // fallback for notifications
       blocks: buildBlocks(input) as never,
       unfurl_links: false,
@@ -79,14 +92,50 @@ export async function postReportToSlack(input: SlackPostInput): Promise<SlackPos
     let permalink: string | undefined;
     if (res.ts) {
       try {
-        const link = await slack.chat.getPermalink({ channel: channelId, message_ts: res.ts });
+        const link = await slackClient.chat.getPermalink({ channel: destChannelId, message_ts: res.ts });
         permalink = link.permalink as string;
       } catch {
         // permalink is best-effort
       }
     }
 
-    return { ok: true, channelId, ts: res.ts as string, permalink };
+    return { ok: true, channelId: destChannelId, ts: res.ts as string, permalink };
+  }
+
+  async function postToUser(userId: string): Promise<SlackPostResult> {
+    try {
+      const dm = await slackClient.conversations.open({ users: userId });
+      const dmChannelId = dm.channel?.id;
+      if (!dmChannelId) throw new Error(`Could not open Slack DM for ${userId}`);
+      return postToChannel(dmChannelId as string);
+    } catch (err) {
+      if (!(err as Error).message.includes("missing_scope")) throw err;
+      return postToChannel(userId);
+    }
+  }
+
+  try {
+    if (channelId) posted.push(await postToChannel(channelId));
+    for (const userId of userIds) {
+      try {
+        posted.push(await postToUser(userId));
+      } catch (err) {
+        failed.push({ ok: false, channelId: userId, error: (err as Error).message });
+      }
+    }
+
+    if (failed.length > 0) {
+      const primary = posted[0] ?? { channelId };
+      return {
+        ok: false,
+        channelId: primary.channelId,
+        ts: primary.ts,
+        permalink: primary.permalink,
+        error: failed.map((f) => `${f.channelId}: ${f.error}`).join("; "),
+      };
+    }
+
+    return posted[0] ?? { ok: true, channelId };
   } catch (err) {
     return { ok: false, channelId, error: (err as Error).message };
   }

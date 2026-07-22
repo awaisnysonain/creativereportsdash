@@ -70,6 +70,13 @@ export function priorL7(reference: Date = new Date()): DateWindow {
   return { start: fmt(start), end: fmt(end), days: 7, label: "Prior L7" };
 }
 
+/** The 7-day window immediately preceding `priorL7`. */
+export function prior2L7(reference: Date = new Date()): DateWindow {
+  const end = subDays(yesterday(reference), 14);
+  const start = subDays(end, 6);
+  return { start: fmt(start), end: fmt(end), days: 7, label: "2 Prior L7" };
+}
+
 /** Human-friendly window label, e.g. "Jun 30 – Jul 6, 2026". */
 export function prettyWindow(w: DateWindow): string {
   const s = new Date(`${w.start}T00:00:00`);
@@ -88,6 +95,7 @@ export function standardWindows(reference: Date = new Date()) {
     l30: last30(reference),
     prior23: prior23(reference),
     priorL7: priorL7(reference),
+    prior2L7: prior2L7(reference),
   };
 }
 

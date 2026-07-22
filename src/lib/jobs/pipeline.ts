@@ -1,6 +1,6 @@
 import type { BrandKey } from "@/config/brands";
 import { getBrand } from "@/config/brands";
-import { last30, last7, prior23, priorL7 } from "@/lib/dates";
+import { last30, last7, prior23, priorL7, prior2L7 } from "@/lib/dates";
 import { fetchMetaAdInsights } from "@/lib/services/meta";
 import { fetchTwAdMetrics } from "@/lib/services/triplewhale";
 import { mergeCreativeMetrics } from "@/lib/analytics/merge";
@@ -27,6 +27,7 @@ import type {
   MergedCreativeMetric,
   MetaAdMetric,
   ParsedCreative,
+  ReportWindow,
   TripleWhaleAdMetric,
 } from "@/types";
 
@@ -36,21 +37,35 @@ import type {
  */
 
 const WINDOWS = () => ({ l7: last7(), l30: last30() });
+const REPORT_WINDOWS = ["L7", "L30", "PRIOR_L7", "PRIOR_2L7"] as const;
+
+function dateWindowFor(window: ReportWindow) {
+  switch (window) {
+    case "L7":
+      return last7();
+    case "L30":
+      return last30();
+    case "PRIOR_L7":
+      return priorL7();
+    case "PRIOR_2L7":
+      return prior2L7();
+  }
+}
 
 // ── Individual jobs ──────────────────────────────────────────────────────────
 
-export async function syncMetaWindow(runId: string, accountKey: string, window: "L7" | "L30") {
+export async function syncMetaWindow(runId: string, accountKey: string, window: ReportWindow) {
   return runJob({ runId, job: `syncMetaWindow:${window}` }, async () => {
-    const w = window === "L7" ? last7() : last30();
+    const w = dateWindowFor(window);
     const rows = await fetchMetaAdInsights({ accountKey, since: w.start, until: w.end });
     await insertMetaMetrics(runId, window, rows);
     return { count: rows.length };
   }, { retries: 2, meta: { accountKey, window } });
 }
 
-export async function syncTripleWhaleWindow(runId: string, storeKey: string, window: "L7" | "L30") {
+export async function syncTripleWhaleWindow(runId: string, storeKey: string, window: ReportWindow) {
   return runJob({ runId, job: `syncTripleWhaleWindow:${window}` }, async () => {
-    const w = window === "L7" ? last7() : last30();
+    const w = dateWindowFor(window);
     const { rows, meta } = await fetchTwAdMetrics({ storeKey, since: w.start, until: w.end });
     await insertTwMetrics(runId, window, rows);
     await writeJobLog({ runId, job: "twRequestMeta", status: "success", message: "TW request metadata", meta: meta as unknown as Record<string, unknown> });
@@ -106,7 +121,7 @@ function toTwMetric(r: Record<string, unknown>): TripleWhaleAdMetric {
   };
 }
 
-export async function mergeCreativeData(runId: string, brand: BrandKey, window: "L7" | "L30") {
+export async function mergeCreativeData(runId: string, brand: BrandKey, window: ReportWindow) {
   return runJob({ runId, job: `mergeCreativeData:${window}` }, async () => {
     const metaRows = (await getMetaRowsForRun(runId, window)).map(toMetaMetric);
     const twRows = (await getTwRowsForRun(runId, window)).map(toTwMetric);
@@ -127,7 +142,7 @@ function reviveMerged(row: Record<string, unknown>): MergedCreativeMetric {
     campaignName: (row.campaign_name as string) ?? null,
     adsetId: (row.adset_id as string) ?? null,
     adsetName: (row.adset_name as string) ?? null,
-    window: (row.window as "L7" | "L30") ?? "L7",
+    window: (row.window as ReportWindow) ?? "L7",
     spend: Number(row.spend) || 0,
     impressions: Number(row.impressions) || 0,
     reach: 0,
@@ -161,10 +176,18 @@ export async function computeCreativeAnalysis(runId: string, brand: BrandKey) {
   return runJob({ runId, job: "computeCreativeAnalysis" }, async () => {
     const l7 = (await getMergedForRun(runId, "L7")).map((r) => reviveMerged(r as unknown as Record<string, unknown>));
     const l30 = (await getMergedForRun(runId, "L30")).map((r) => reviveMerged(r as unknown as Record<string, unknown>));
+    const previousL7 = (await getMergedForRun(runId, "PRIOR_L7")).map((r) => reviveMerged(r as unknown as Record<string, unknown>));
+    const previous2L7 = (await getMergedForRun(runId, "PRIOR_2L7")).map((r) => reviveMerged(r as unknown as Record<string, unknown>));
+    if (l7.length === 0 || l30.length === 0 || previousL7.length === 0 || previous2L7.length === 0) {
+      throw new Error(
+        `Cannot generate weekly report without merged L7, previous 7, 7 before that, and L30 data ` +
+          `(L7=${l7.length}, previous7=${previousL7.length}, previous2=${previous2L7.length}, L30=${l30.length}).`,
+      );
+    }
 
     // Winners/decelerators derive the prior weekly run-rate from L30 vs L7 at the
     // job level: prior = (L30 − L7) / 23 × 7 (see analytics/index.ts).
-    const snapshot = buildAnalysisSnapshot({ l7, l30 });
+    const snapshot = buildAnalysisSnapshot({ l7, previousL7, previous2L7, l30 });
     const snapshotId = await saveAnalysisSnapshot(runId, brand, snapshot);
 
     await updateSyncRun(runId, {
@@ -254,7 +277,7 @@ export async function weeklyFullRun(opts: WeeklyRunOptions) {
 
   // 1) Meta sync (both windows)
   if (accountKey) {
-    for (const window of ["L7", "L30"] as const) {
+    for (const window of REPORT_WINDOWS) {
       try {
         await syncMetaWindow(runId, accountKey, window);
       } catch (e) {
@@ -266,7 +289,7 @@ export async function weeklyFullRun(opts: WeeklyRunOptions) {
 
   // 2) Triple Whale sync (both windows)
   if (storeKey) {
-    for (const window of ["L7", "L30"] as const) {
+    for (const window of REPORT_WINDOWS) {
       try {
         await syncTripleWhaleWindow(runId, storeKey, window);
       } catch (e) {
@@ -277,7 +300,7 @@ export async function weeklyFullRun(opts: WeeklyRunOptions) {
   }
 
   // 3) Merge
-  for (const window of ["L7", "L30"] as const) {
+  for (const window of REPORT_WINDOWS) {
     try {
       await mergeCreativeData(runId, opts.brand, window);
     } catch (e) {

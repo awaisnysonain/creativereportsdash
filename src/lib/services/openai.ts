@@ -37,7 +37,12 @@ function buildContext(brand: string, snapshot: AnalysisSnapshot) {
   const w = standardWindows();
   return {
     brand,
-    windows: { l7: prettyWindow(w.l7), l30: prettyWindow(w.l30) },
+    windows: {
+      l7: prettyWindow(w.l7),
+      previousL7: prettyWindow(w.priorL7),
+      previous2L7: prettyWindow(w.prior2L7),
+      l30: prettyWindow(w.l30),
+    },
     topline: snapshot.topline,
     l7: {
       categories: snapshot.l7.categories,
@@ -91,8 +96,8 @@ const SYSTEM_PROMPT = `You are a senior paid-social creative strategist writing 
 Be concise, strategic, and decision-oriented. Use concrete numbers. Avoid fluff and hedging.
 Respect the methodology provided in the DATA payload exactly — do NOT invent code labels, and honor the campaign-based funnel rule, the delivery-based win/lose definition, the whitelist-only creator scope, and the job-level winner/decelerator thresholds.
 Open with a short "How to read" methodology paragraph derived from the provided methodology object (merge basis, win/lose, campaign-based funnel, TOF sh., NV% and Thumbstop, element-scope caveat, legacy naming disclaimer, Influencer/Creator naming).
-Then structure the markdown report with these sections, each showing L7 then L30 where applicable:
-1. Topline (L7 and L30)
+Then structure the markdown report with these sections. In Topline, use a vertical metric table and use these exact column names: Metric, L7, Previous 7, 7 before that. Do not compare L7 against L30 side-by-side there. For the remaining detailed breakout sections, stack L7 first and L30 below it where applicable:
+1. Topline (L7, Previous 7, 7 before that)
 2. Category Performance
 3. Opener Insights (top 15, mention Thumbstop)
 4. Color Insights
@@ -221,7 +226,7 @@ const HOW_TO_READ =
 /** Deterministic template so the pipeline works without an API key. */
 export function deterministicReport(brand: string, s: AnalysisSnapshot): GeneratedReport {
   const w = standardWindows();
-  const { l7, l30 } = s.topline;
+  const { l7, previousL7, previous2L7, l30 } = s.topline;
   const b7: WindowedBreakouts = s.l7;
   const b30: WindowedBreakouts = s.l30;
   const winners = s.winners;
@@ -244,8 +249,18 @@ export function deterministicReport(brand: string, s: AnalysisSnapshot): Generat
     .filter(Boolean)
     .join("\n");
 
-  const toplineTable = (t: typeof l7) =>
-    `| ${money(t.spend)} | ${t.creatives.toLocaleString()} | ${formatRoas(t.metaRoas)} | ${formatRoas(t.twRoas)} | ${tofsh(t.tofShare)} | ${nv(t.nvPct)} |`;
+  const weeklyToplineTable = `| Metric | L7 (${prettyWindow(w.l7)}) | Previous 7 (${prettyWindow(w.priorL7)}) | 7 before that (${prettyWindow(w.prior2L7)}) |
+|---|--:|--:|--:|
+| Spend | ${money(l7.spend)} | ${money(previousL7.spend)} | ${money(previous2L7.spend)} |
+| Purchases | ${l7.purchases.toLocaleString()} | ${previousL7.purchases.toLocaleString()} | ${previous2L7.purchases.toLocaleString()} |
+| Revenue | ${money(l7.revenue)} | ${money(previousL7.revenue)} | ${money(previous2L7.revenue)} |
+| Attrib. Revenue | ${money(l7.attributedRevenue)} | ${money(previousL7.attributedRevenue)} | ${money(previous2L7.attributedRevenue)} |
+| NC ROAS | ${formatRoas(l7.ncRoas)} | ${formatRoas(previousL7.ncRoas)} | ${formatRoas(previous2L7.ncRoas)} |
+| TW ROAS | ${formatRoas(l7.twRoas)} | ${formatRoas(previousL7.twRoas)} | ${formatRoas(previous2L7.twRoas)} |
+| Meta ROAS | ${formatRoas(l7.metaRoas)} | ${formatRoas(previousL7.metaRoas)} | ${formatRoas(previous2L7.metaRoas)} |
+| NV % | ${nv(l7.nvPct)} | ${nv(previousL7.nvPct)} | ${nv(previous2L7.nvPct)} |
+| TOF Share | ${tofsh(l7.tofShare)} | ${tofsh(previousL7.tofShare)} | ${tofsh(previous2L7.tofShare)} |
+| Unique Creatives | ${l7.creatives.toLocaleString()} | ${previousL7.creatives.toLocaleString()} | ${previous2L7.creatives.toLocaleString()} |`;
 
   const md = `# ${title}
 
@@ -256,10 +271,9 @@ _Data report · Meta NT1 · L7 = ${prettyWindow(w.l7)} · L30 = ${prettyWindow(w
 > ${LEGACY_NAMING_NOTE}
 
 ## Topline
-| Window | Spend | Creatives | Meta ROAS | TW ROAS | % TOF | NV % |
-|---|--:|--:|--:|--:|--:|--:|
-| L7 · ${prettyWindow(w.l7)} ${toplineTable(l7)}
-| L30 · ${prettyWindow(w.l30)} ${toplineTable(l30)}
+${weeklyToplineTable}
+
+_L30 (${prettyWindow(w.l30)}) is still used below for longer-window element breakouts and prior run-rate checks._
 
 ## 1) Creative element breakouts
 

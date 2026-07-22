@@ -5,6 +5,8 @@ export type Funnel = "TOF" | "MOF" | "BOF";
 
 export type WinLoss = "Win" | "Lose";
 
+export type ReportWindow = "L7" | "L30" | "PRIOR_L7" | "PRIOR_2L7";
+
 /** Output of the creative name parser. */
 export interface ParsedCreative {
   raw: string;
@@ -109,7 +111,7 @@ export interface MergedCreativeMetric {
   campaignName: string | null;
   adsetId: string | null;
   adsetName: string | null;
-  window: "L7" | "L30";
+  window: ReportWindow;
   // Meta
   spend: number;
   impressions: number;
@@ -143,7 +145,7 @@ export interface MergedCreativeMetric {
 }
 
 export interface ToplineMetrics {
-  window: "L7" | "L30";
+  window: ReportWindow;
   spend: number;
   creatives: number;
   metaRoas: number;
@@ -246,7 +248,7 @@ export interface WindowedBreakouts {
 }
 
 export interface AnalysisSnapshot {
-  topline: { l7: ToplineMetrics; l30: ToplineMetrics };
+  topline: { l7: ToplineMetrics; previousL7: ToplineMetrics; previous2L7: ToplineMetrics; l30: ToplineMetrics };
   l7: WindowedBreakouts;
   l30: WindowedBreakouts;
   winners: WinnerRow[];
