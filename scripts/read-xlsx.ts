@@ -1,7 +1,11 @@
 import * as XLSX from "xlsx";
 import path from "node:path";
 
-const file = process.argv[2] ?? "NEW NAME BUILDING  (8).xlsx";
+const file = process.argv[2];
+if (!file) {
+  console.error("Usage: npm run read:xlsx -- <path-to-xlsx>");
+  process.exit(1);
+}
 const wb = XLSX.readFile(path.resolve(process.cwd(), file));
 
 const target = [

@@ -6,7 +6,6 @@ import path from "node:path";
  * CLI: import a Meta CSV/XLSX export as a new analyzed run.
  * Usage:
  *   npm run import:csv -- <path-to-file> [brand] [window]
- *   npm run import:csv -- samples/NT1-Ads-Jun-30-2026-Jul-6-2026.csv NOBL L7
  */
 async function main() {
   const [file, brandArg, windowArg] = process.argv.slice(2);

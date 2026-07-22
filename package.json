@@ -13,7 +13,6 @@
     "import:csv": "tsx scripts/import-csv.ts",
     "read:xlsx": "tsx scripts/read-xlsx.ts",
     "test:connections": "tsx scripts/test-connections.ts",
-    "verify": "tsx scripts/verify-pipeline.ts",
     "scheduler": "tsx scripts/scheduler.ts",
     "setup": "tsx scripts/migrate.ts && tsx scripts/seed.ts"
   },

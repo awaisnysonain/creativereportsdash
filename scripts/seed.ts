@@ -1,11 +1,7 @@
 import "./load-env";
-import { readFileSync, existsSync } from "node:fs";
-import path from "node:path";
 
 /**
- * Seeds reference config (brands, Meta accounts, TW stores) and, if sample Meta
- * CSV exports are present in /samples, creates a fully-analyzed demo run so the
- * dashboard has data on first boot.
+ * Seeds reference config (brands, Meta accounts, TW stores).
  */
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -38,40 +34,6 @@ async function main() {
     );
   }
   console.log("✓ Reference config seeded.");
-
-  // Sample data → demo run.
-  const l7File = path.resolve(process.cwd(), "samples/NT1-Ads-Jun-30-2026-Jul-6-2026.csv");
-  const l30File = path.resolve(process.cwd(), "samples/NT1-Ads-Jun-7-2026-Jul-6-2026.csv");
-
-  if (existsSync(l7File) && existsSync(l30File)) {
-    const existing = await queryOne<{ n: string }>(
-      `SELECT COUNT(*)::text AS n FROM sync_runs WHERE status IN ('success','partial') AND trigger != 'import'`,
-    );
-    if (Number(existing?.n ?? 0) > 0) {
-      console.log("ℹ Live sync runs already exist — skipping sample CSV demo import.");
-    } else {
-    console.log("→ Importing sample Meta exports (NOBL) as a demo run…");
-    const { importMetaCsv } = await import("../src/lib/importer/meta-csv");
-    const { importAndAnalyze } = await import("../src/lib/jobs/pipeline");
-
-    const l7 = importMetaCsv(readFileSync(l7File, "utf8"), "NOBL");
-    const l30 = importMetaCsv(readFileSync(l30File, "utf8"), "NOBL");
-    console.log(`   L7: ${l7.rows.length} ads (${l7.dateStart}…${l7.dateStop})`);
-    console.log(`   L30: ${l30.rows.length} ads (${l30.dateStart}…${l30.dateStop})`);
-
-    const result = await importAndAnalyze({
-      brand: "NOBL",
-      windows: [
-        { window: "L7", meta: l7.rows, tw: l7.tw },
-        { window: "L30", meta: l30.rows, tw: l30.tw },
-      ],
-      generateReport: true,
-    });
-    console.log(`✓ Demo run created: ${result.runId}${result.reportId ? ` (report ${result.reportId})` : ""}`);
-    }
-  } else {
-    console.log("ℹ No sample CSVs found in /samples — skipping demo run.");
-  }
 
   console.log("\n✓ Seed complete.\n");
   process.exit(0);

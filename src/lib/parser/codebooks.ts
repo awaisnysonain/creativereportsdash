@@ -1,7 +1,7 @@
 /**
  * Codebooks / mappings for the NOBL–FLO creative naming convention.
  *
- * Sourced directly from the "NEW NAME BUILDING" master sheet reference tabs
+ * Sourced from the historical creative naming reference tabs
  * (Convention Reference, 001-Company, 002-Strat, 003-Category, 004-Copywriting,
  * 005-Opener, 006-Hook, 007008-Color codes, 013 Demographics, LP).
  *
