@@ -280,12 +280,29 @@
       reports = JSON.parse(reportsDataEl.textContent || "[]");
     } catch (e) {}
     let activeId = $("#reports-app")?.getAttribute("data-initial-id") || "";
+    let editing = false;
+
+    function activeReport() {
+      return reports.find(function (x) { return x.id === activeId; });
+    }
+
+    function setEditMode(enabled) {
+      editing = enabled;
+      const editor = $("#report-editor");
+      const tabs = $("#report-viewer .tabs");
+      const panels = $$("#report-viewer .tab-panel");
+      if (editor) editor.hidden = !enabled;
+      if (tabs) tabs.hidden = enabled;
+      panels.forEach(function (panel) { panel.hidden = enabled; });
+    }
 
     function selectReport(id) {
       const r = reports.find(function (x) {
         return x.id === id;
       });
       if (!r) return;
+      if (editing && !window.confirm("Discard unsaved report changes?")) return;
+      setEditMode(false);
       activeId = id;
       $$(".report-item").forEach(function (el) {
         el.classList.toggle("active", el.getAttribute("data-report-id") === id);
@@ -301,6 +318,7 @@
           slackHtml(r.slack_summary) +
           "</div></div>";
       }
+      window.history.replaceState({}, "", "/reports?id=" + encodeURIComponent(id));
     }
 
     function esc(s) {
@@ -409,6 +427,74 @@
         selectReport(btn.getAttribute("data-report-id") || "");
       });
     });
+
+    const editBtn = $("#btn-edit-report");
+    const cancelEditBtn = $("#btn-cancel-edit");
+    const editor = $("#report-editor");
+    if (editBtn) {
+      editBtn.addEventListener("click", function () {
+        const r = activeReport();
+        if (!r) return;
+        $("#report-edit-title").value = r.title || "";
+        $("#report-edit-slack").value = r.slack_summary || "";
+        $("#report-edit-markdown").value = r.markdown || "";
+        setEditMode(true);
+        $("#report-edit-title").focus();
+      });
+    }
+    if (cancelEditBtn) cancelEditBtn.addEventListener("click", function () { setEditMode(false); });
+    if (editor) {
+      editor.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        if (!activeId || !editor.reportValidity()) return;
+        const saveBtn = $("#btn-save-report");
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch("/api/reports/" + encodeURIComponent(activeId), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: $("#report-edit-title").value,
+              slackSummary: $("#report-edit-slack").value,
+              markdown: $("#report-edit-markdown").value,
+            }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || "Report update failed");
+          const index = reports.findIndex(function (r) { return r.id === activeId; });
+          reports[index] = data.report;
+          const itemTitle = document.querySelector('.report-item[data-report-id="' + CSS.escape(activeId) + '"] .r-title');
+          if (itemTitle) itemTitle.textContent = data.report.title;
+          setEditMode(false);
+          selectReport(activeId);
+          toast("Report updated", true);
+        } catch (err) {
+          toast((err && err.message) || "Report update failed", false);
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    }
+
+    const deleteBtn = $("#btn-delete-report");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async function () {
+        const r = activeReport();
+        if (!r) return;
+        const confirmed = window.confirm('Permanently delete "' + r.title + '"?\n\nPreviously sent Slack messages will remain, but their report link will stop working.');
+        if (!confirmed) return;
+        deleteBtn.disabled = true;
+        try {
+          const res = await fetch("/api/reports/" + encodeURIComponent(activeId), { method: "DELETE" });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || "Report delete failed");
+          window.location.assign("/reports");
+        } catch (err) {
+          toast((err && err.message) || "Report delete failed", false);
+          deleteBtn.disabled = false;
+        }
+      });
+    }
 
     const slackPost = $("#btn-slack-post");
     if (slackPost) {

@@ -125,6 +125,7 @@ pagesRouter.get("/raw-data", async (_req, res, next) => {
 pagesRouter.get("/reports", async (req, res, next) => {
   try {
     const status = await dbStatus();
+    const latest = await getLatestRun();
     const reports = await getReports(50);
     renderPage(res, "reports", {
       title: "Weekly Reports",
@@ -132,7 +133,7 @@ pagesRouter.get("/reports", async (req, res, next) => {
       actions: "",
       status,
       reports,
-      initialId: (req.query.id as string) || (reports[0] as { id?: string })?.id || "",
+      initialId: (req.query.id as string) || latest?.report_id || (reports[0] as { id?: string })?.id || "",
     });
   } catch (e) {
     next(e);

@@ -200,6 +200,33 @@ export interface CreatorBreakout {
   nvPct: number;
 }
 
+export interface StrategistPerformance {
+  key: string;
+  name: string;
+  codes: string[];
+  attributionStatus: "confirmed" | "unconfirmed-code";
+  spend: number;
+  usaTofSpend: number;
+  usaTofSpendShare: number;
+  creatives: number;
+  uniqueJobs: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  metaRoas: number;
+  attributedRoas: number;
+  ncRoas: number;
+  newVisitorRate: number;
+  nc: number;
+  iterations: number;
+  strategyUntagged: number;
+  nvns: number;
+  nsov: number;
+  nvos: number;
+  ovos: number;
+  productionUntagged: number;
+}
+
 export interface WinnerRow {
   adId: string;
   label: string; // e.g. "J0419 · My Ex Husbands Girlfriend"
@@ -249,6 +276,12 @@ export interface WindowedBreakouts {
 
 export interface AnalysisSnapshot {
   topline: { l7: ToplineMetrics; previousL7: ToplineMetrics; previous2L7: ToplineMetrics; l30: ToplineMetrics };
+  strategists?: {
+    l7: StrategistPerformance[];
+    previousL7: StrategistPerformance[];
+    previous2L7: StrategistPerformance[];
+    l30: StrategistPerformance[];
+  };
   l7: WindowedBreakouts;
   l30: WindowedBreakouts;
   winners: WinnerRow[];

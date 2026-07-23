@@ -313,6 +313,27 @@ export async function listAiReports(limit = 50): Promise<AiReportRow[]> {
   return query<AiReportRow>(`SELECT * FROM ai_reports ORDER BY created_at DESC LIMIT $1`, [limit]);
 }
 
+export async function updateAiReport(
+  id: string,
+  input: { title: string; slackSummary: string; markdown: string },
+): Promise<AiReportRow | null> {
+  return queryOne<AiReportRow>(
+    `UPDATE ai_reports SET title = $2, slack_summary = $3, markdown = $4 WHERE id = $1 RETURNING *`,
+    [id, input.title, input.slackSummary, input.markdown],
+  );
+}
+
+export async function deleteAiReport(id: string): Promise<boolean> {
+  return withTransaction(async (client) => {
+    const found = await client.query<{ id: string }>(`SELECT id FROM ai_reports WHERE id = $1 FOR UPDATE`, [id]);
+    if (!found.rows.length) return false;
+    await client.query(`UPDATE sync_runs SET report_id = NULL WHERE report_id = $1`, [id]);
+    await client.query(`DELETE FROM slack_posts WHERE report_id = $1`, [id]);
+    const deleted = await client.query<{ id: string }>(`DELETE FROM ai_reports WHERE id = $1 RETURNING id`, [id]);
+    return deleted.rows.length > 0;
+  });
+}
+
 // ── Slack posts ──────────────────────────────────────────────────────────────
 
 export async function saveSlackPost(input: {

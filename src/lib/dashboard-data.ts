@@ -82,8 +82,39 @@ export function reviveMergedRow(row: Record<string, unknown>): MergedCreativeMet
   };
 }
 
+function analysisDepthScore(snapshot: AnalysisSnapshot | null): number {
+  if (!snapshot) return 0;
+  return (
+    (snapshot.l7?.categories?.length ?? 0) +
+    (snapshot.l7?.openers?.length ?? 0) +
+    (snapshot.l7?.colors?.length ?? 0) +
+    (snapshot.l7?.demographics?.length ?? 0) +
+    (snapshot.l7?.scripts?.length ?? 0) +
+    (snapshot.l7?.creators?.length ?? 0) +
+    (snapshot.winners?.length ?? 0) +
+    (snapshot.decelerators?.length ?? 0)
+  );
+}
+
 export async function getLatestRun(): Promise<SyncRunRow | null> {
-  return safe(() => latestSuccessfulRun(), null);
+  return safe(async () => {
+    const runs = await listSyncRuns(50);
+    let best: { run: SyncRunRow; score: number } | null = null;
+
+    for (const run of runs) {
+      if (run.status !== "success" || !run.report_id) continue;
+      const snap = await getSnapshotForRun(run.id);
+      const depth = analysisDepthScore(snap?.payload ?? null);
+      if (depth <= 0) continue;
+      const hasCurrentWeeklyComparisons = Boolean(snap?.payload?.topline?.previousL7 && snap.payload.topline.previous2L7);
+      const currentSchemaWeight = hasCurrentWeeklyComparisons ? 1_000_000 : 0;
+      const scheduledWeight = run.trigger === "scheduled" ? 100_000 : 0;
+      const score = currentSchemaWeight + scheduledWeight + depth;
+      if (!best || score > best.score) best = { run, score };
+    }
+
+    return best?.run ?? (await latestSuccessfulRun());
+  }, null);
 }
 
 export async function getRuns(limit = 50): Promise<SyncRunRow[]> {

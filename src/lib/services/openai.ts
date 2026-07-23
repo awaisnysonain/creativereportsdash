@@ -8,6 +8,7 @@ import type {
   DeceleratorRow,
   GroupBreakout,
   ScriptBreakout,
+  StrategistPerformance,
   WindowedBreakouts,
   WinnerRow,
 } from "@/types";
@@ -44,6 +45,7 @@ function buildContext(brand: string, snapshot: AnalysisSnapshot) {
       l30: prettyWindow(w.l30),
     },
     topline: snapshot.topline,
+    strategists: snapshot.strategists ?? null,
     l7: {
       categories: snapshot.l7.categories,
       openers: snapshot.l7.openers,
@@ -73,6 +75,7 @@ function buildContext(brand: string, snapshot: AnalysisSnapshot) {
       thumbstop: "3-second video plays ÷ impressions (Meta export: 3-second video plays rate per impressions; API: actions.video_view).",
       elementScope: "Element tables only cover ads with a parseable builder code (convention ≠ unknown). Legacy names may produce spurious tags — ignore rows that do not map to a real J#### job or standard coded field.",
       creatorScope: "Creator Performance is whitelisted ads only.",
+      strategistScope: "Strategist Performance uses confirmed 002 codes only: Luke=LK, Taylor=TC, Franz=FA, Chris=CA. Roger Hayn is listed without metrics until a code is confirmed. USA TOF share matches only the exact `usa - tof - all` campaign. NC/IT and production tags are never inferred when absent.",
       scopedSections: "Script Iteration Tracking, New Winners, and Decelerators exclude the `asc+ promo` campaign and catalog/Marpipe.",
       winnersDef: "Job-level. Prior weekly run-rate = (L30 − L7)/23×7. New winner: prior <$2K and L7 ≥$10K. Decelerator: prior ≥$18K and L7 <66% of prior.",
     },
@@ -92,9 +95,20 @@ function withReportDisclaimer(markdown: string): string {
   return `${markdown.trim()}\n\n${block}`;
 }
 
+function polishReportLanguage(text: string): string {
+  return text
+    .replace(/\bTW ROAS\b/g, "Attributed ROAS")
+    .replace(/\bTW\b(?=\s+(?:attributed|revenue|new visitors|unique visitors))/g, "Attribution")
+    .replace(/\bNV\s*%\b/g, "New visitor %")
+    .replace(/\bTOF sh\.\b/g, "TOF share")
+    .replace(/\bPrev 7\b/g, "Previous 7")
+    .replace(/\b7 Before\b/g, "7 before that");
+}
+
 const SYSTEM_PROMPT = `You are a senior paid-social creative strategist writing the weekly Creative & Creator Performance report for a DTC brand.
 Be concise, strategic, and decision-oriented. Use concrete numbers. Avoid fluff and hedging.
 Respect the methodology provided in the DATA payload exactly — do NOT invent code labels, and honor the campaign-based funnel rule, the delivery-based win/lose definition, the whitelist-only creator scope, and the job-level winner/decelerator thresholds.
+Never assign a strategist code to Roger Hayn unless the DATA payload confirms one. Never infer NC, IT, NVNS, NSOV, NVOS, or OVOS from other fields.
 Write in a polished operator-ready style. Avoid decorative markdown, horizontal rules, excessive bullets, hype language, or AI-sounding filler. Use concise paragraphs, clean section headings, and tables where tables are clearer than prose.
 Open with a short "How to read" methodology paragraph derived from the provided methodology object (merge basis, win/lose, campaign-based funnel, top-of-funnel share, new visitor rate, Thumbstop, element-scope caveat, legacy naming disclaimer, Influencer/Creator naming).
 Then structure the markdown report with these sections. In Topline, use a vertical metric table and use these exact column names: Metric, L7, Previous 7, 7 before that. Do not compare L7 against L30 side-by-side there. For the remaining detailed breakout sections, stack L7 first and L30 below it where applicable:
@@ -109,6 +123,56 @@ Then structure the markdown report with these sections. In Topline, use a vertic
 9. Decelerators
 10. Actions / Recommendations (bulleted, specific, ranked by impact)
 Write for a performance marketing team that will make scaling/kill decisions from this.`;
+
+function strategistPerformanceTable(rows: StrategistPerformance[]): string {
+  const head = `| Strategist | Code | Spend | USA TOF share | Creatives | Jobs | Wins / Losses | Win rate | Meta ROAS | Attributed ROAS | NC ROAS | New visitor % |\n|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|`;
+  const body = rows
+    .map((r) => {
+      if (r.attributionStatus !== "confirmed") return `| ${r.name} | _unconfirmed_ | — | — | — | — | — | — | — | — | — | — |`;
+      return `| ${r.name} | ${r.codes.map((c) => `002${c}`).join(", ")} | ${moneyK(r.spend)} | ${tofsh(r.usaTofSpendShare)} | ${r.creatives} | ${r.uniqueJobs} | ${r.wins} / ${r.losses} | ${tofsh(r.winRate)} | ${formatRoas(r.metaRoas)} | ${formatRoas(r.attributedRoas)} | ${formatRoas(r.ncRoas)} | ${nv(r.newVisitorRate)} |`;
+    })
+    .join("\n");
+  return `${head}\n${body}`;
+}
+
+function strategistTagTable(rows: StrategistPerformance[]): string {
+  const head = `| Strategist | NC | IT | NC/IT untagged | NVNS | NSOV | NVOS | OVOS | Production untagged |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|`;
+  const body = rows
+    .map((r) =>
+      r.attributionStatus === "confirmed"
+        ? `| ${r.name} | ${r.nc} | ${r.iterations} | ${r.strategyUntagged} | ${r.nvns} | ${r.nsov} | ${r.nvos} | ${r.ovos} | ${r.productionUntagged} |`
+        : `| ${r.name} | — | — | — | — | — | — | — | — |`,
+    )
+    .join("\n");
+  return `${head}\n${body}`;
+}
+
+function strategistReportSection(snapshot: AnalysisSnapshot): string {
+  const s = snapshot.strategists;
+  if (!s?.l7?.length) return "";
+  const w = standardWindows();
+  return `## Strategist performance\n_Attributed from confirmed 002 codes. USA TOF share uses the exact \`usa - tof - all\` campaign. Explicit NC/IT and production tags are reported as untagged when absent; they are never inferred._\n\n**L7 · ${prettyWindow(w.l7)}**\n\n${strategistPerformanceTable(s.l7)}\n\n**Previous 7 · ${prettyWindow(w.priorL7)}**\n\n${strategistPerformanceTable(s.previousL7)}\n\n**7 before that · ${prettyWindow(w.prior2L7)}**\n\n${strategistPerformanceTable(s.previous2L7)}\n\n**L30 · ${prettyWindow(w.l30)}**\n\n${strategistPerformanceTable(s.l30)}\n\n### Tag coverage · L7\n${strategistTagTable(s.l7)}`;
+}
+
+function strategistSlackDigest(snapshot: AnalysisSnapshot): string {
+  const rows = snapshot.strategists?.l7;
+  if (!rows?.length) return "";
+  const lines = rows.map((r) =>
+    r.attributionStatus === "confirmed"
+      ? `• ${r.name} (${r.codes.map((c) => `002${c}`).join(", ")}): ${moneyK(r.spend)} spend · USA TOF ${tofsh(r.usaTofSpendShare)} · ${tofsh(r.winRate)} win rate`
+      : `• ${r.name}: awaiting confirmed 002 code`,
+  );
+  return `*Strategist scorecard (L7)*\n${lines.join("\n")}`;
+}
+
+function withStrategistReporting(markdown: string, slackSummary: string, snapshot: AnalysisSnapshot) {
+  const section = strategistReportSection(snapshot);
+  const digest = strategistSlackDigest(snapshot);
+  return {
+    markdown: section && !markdown.includes("## Strategist performance") ? `${markdown.trim()}\n\n${section}` : markdown,
+    slackSummary: digest ? `${slackSummary.trim()}\n\n${digest}`.slice(0, 2900) : slackSummary,
+  };
+}
 
 export async function generateWeeklyReport(brand: string, snapshot: AnalysisSnapshot): Promise<GeneratedReport> {
   const oa = client();
@@ -138,10 +202,15 @@ export async function generateWeeklyReport(brand: string, snapshot: AnalysisSnap
 
     const content = completion.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(content) as Partial<GeneratedReport>;
+    const enriched = withStrategistReporting(
+      polishReportLanguage(withReportDisclaimer(parsed.markdown || deterministicReport(brand, snapshot).markdown)),
+      polishReportLanguage(parsed.slackSummary || deterministicReport(brand, snapshot).slackSummary),
+      snapshot,
+    );
     return {
       title: parsed.title || `${brand} — Weekly Creative Report`,
-      slackSummary: parsed.slackSummary || deterministicReport(brand, snapshot).slackSummary,
-      markdown: withReportDisclaimer(parsed.markdown || deterministicReport(brand, snapshot).markdown),
+      slackSummary: enriched.slackSummary,
+      markdown: enriched.markdown,
       model: env.OPENAI_MODEL || "gpt-4.1",
       usedAi: true,
     };
@@ -336,6 +405,8 @@ ${creatorTable(b7.creators.slice(0, 16))}
 
 ${creatorTable(b30.creators.slice(0, 16))}
 
+${strategistReportSection(s)}
+
 ## 4) New winners this week (≈ $0 the prior period)
 _Job = J#### · open-entry title. Prior weekly run-rate &lt; $2K and L7 spend ≥ $10K._
 
@@ -349,5 +420,6 @@ ${deceleratorTable(decel)}
 ---
 _Report generated ${env.OPENAI_API_KEY ? "with OpenAI narrative" : "locally (deterministic template — connect OPENAI_API_KEY for full narrative)"}._`;
 
-  return { title, slackSummary, markdown: md, model: "template", usedAi: false };
+  const enriched = withStrategistReporting(polishReportLanguage(md), polishReportLanguage(slackSummary), s);
+  return { title, slackSummary: enriched.slackSummary, markdown: enriched.markdown, model: "template", usedAi: false };
 }

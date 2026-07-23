@@ -8,6 +8,7 @@ import type {
   ParsedCreative,
   ReportWindow,
   ScriptBreakout,
+  StrategistPerformance,
   ToplineMetrics,
   WindowedBreakouts,
   WinnerRow,
@@ -15,6 +16,7 @@ import type {
 import { safeDiv } from "@/lib/utils";
 import { isExcludedFromScopedSections } from "./campaign-rules";
 import { cleanScriptStem } from "@/lib/parser/creative-name-parser";
+import { STRATEGIST_ROSTER } from "@/lib/parser/codebooks";
 
 /**
  * Analytics engine. Pure functions over merged creative rows — no I/O — so they
@@ -427,6 +429,74 @@ export function computeCreatorBreakout(rows: MergedCreativeMetric[]): CreatorBre
   return out;
 }
 
+function normalizedCampaignName(name: string | null): string {
+  return String(name ?? "")
+    .toLowerCase()
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*/g, "-")
+    .trim();
+}
+
+function explicitTokens(name: string): Set<string> {
+  return new Set((name.toUpperCase().match(/[A-Z0-9]+/g) ?? []).filter(Boolean));
+}
+
+export function computeStrategistPerformance(rows: MergedCreativeMetric[]): StrategistPerformance[] {
+  if (rows.length > 0 && rows[0].brand !== "NOBL") return [];
+  const usaTofSpend = rows
+    .filter((r) => normalizedCampaignName(r.campaignName) === "usa-tof-all")
+    .reduce((total, r) => total + r.spend, 0);
+
+  return STRATEGIST_ROSTER.map((person) => {
+    const codes = person.codes.map((code) => code.toUpperCase());
+    const gr = rows.filter((r) => codes.includes(String(r.parsed.strat ?? "").toUpperCase()));
+    const spend = sum(gr, (r) => r.spend);
+    const jobs = new Set(gr.map(jobKeyOf));
+    const wins = gr.filter((r) => r.winLoss === "Win").length;
+    const strategyTags = gr.map((r) => explicitTokens(r.adName));
+    const nc = strategyTags.filter((tokens) => tokens.has("NC")).length;
+    const iterations = strategyTags.filter((tokens) => tokens.has("IT")).length;
+    const nvns = strategyTags.filter((tokens) => tokens.has("NVNS")).length;
+    const nsov = strategyTags.filter((tokens) => tokens.has("NSOV")).length;
+    const nvos = strategyTags.filter((tokens) => tokens.has("NVOS")).length;
+    const ovos = strategyTags.filter((tokens) => tokens.has("OVOS")).length;
+    const personUsaTofSpend = sum(
+      gr.filter((r) => normalizedCampaignName(r.campaignName) === "usa-tof-all"),
+      (r) => r.spend,
+    );
+    const ncRevenue = sum(gr, (r) => (r.ncRoas ?? 0) * r.spend);
+
+    return {
+      key: person.key,
+      name: person.name,
+      codes: [...person.codes],
+      attributionStatus: person.confirmed ? "confirmed" : "unconfirmed-code",
+      spend,
+      usaTofSpend: personUsaTofSpend,
+      usaTofSpendShare: safeDiv(personUsaTofSpend, usaTofSpend),
+      creatives: gr.length,
+      uniqueJobs: jobs.size,
+      wins,
+      losses: gr.length - wins,
+      winRate: safeDiv(wins, gr.length),
+      metaRoas: safeDiv(sum(gr, (r) => r.purchaseValue), spend),
+      attributedRoas: safeDiv(sum(gr, (r) => r.attributedRevenue), spend),
+      ncRoas: safeDiv(ncRevenue, spend),
+      newVisitorRate: nvPctOf(gr),
+      nc,
+      iterations,
+      strategyUntagged: gr.length - strategyTags.filter((tokens) => tokens.has("NC") || tokens.has("IT")).length,
+      nvns,
+      nsov,
+      nvos,
+      ovos,
+      productionUntagged:
+        gr.length - strategyTags.filter((tokens) => ["NVNS", "NSOV", "NVOS", "OVOS"].some((tag) => tokens.has(tag))).length,
+    };
+  });
+}
+
 // ---------- Job-level winners & decelerators ----------
 
 interface JobAgg {
@@ -595,6 +665,12 @@ export function buildAnalysisSnapshot(input: BuildSnapshotInput): AnalysisSnapsh
       previousL7: computeTopline(previousL7, "PRIOR_L7"),
       previous2L7: computeTopline(previous2L7, "PRIOR_2L7"),
       l30: computeTopline(l30, "L30"),
+    },
+    strategists: {
+      l7: computeStrategistPerformance(l7),
+      previousL7: computeStrategistPerformance(previousL7),
+      previous2L7: computeStrategistPerformance(previous2L7),
+      l30: computeStrategistPerformance(l30),
     },
     l7: windowedBreakouts(l7),
     l30: windowedBreakouts(l30),

@@ -136,6 +136,15 @@ export function slackToHtml(summary: string): string {
     .replace(/\n/g, "<br/>");
 }
 
+export function jsonForHtml(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 /** Inline SVG icon set (Lucide-style). */
 const ICONS: Record<string, string> = {
   chart: '<path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 5-6"/>',
@@ -194,6 +203,7 @@ export const helpers = {
   icon,
   renderMarkdown,
   slackToHtml,
+  jsonForHtml,
   truncate,
   INTEGRATION_TEST,
   fmtCurrency: formatCurrency,

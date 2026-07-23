@@ -15,7 +15,7 @@ import {
   syncTripleWhaleWindow,
   weeklyFullRun,
 } from "@/lib/jobs/pipeline";
-import { createSyncRun, getAiReport, getSyncRun, latestSuccessfulRun, listSyncRuns, saveSlackPost } from "@/lib/db/repositories";
+import { createSyncRun, deleteAiReport, getAiReport, getSyncRun, latestSuccessfulRun, listSyncRuns, saveSlackPost, updateAiReport } from "@/lib/db/repositories";
 import { importMetaCsv, importMetaXlsx } from "@/lib/importer/meta-csv";
 import { testMetaConnection } from "@/lib/services/meta";
 import { testTwConnection } from "@/lib/services/triplewhale";
@@ -201,6 +201,42 @@ apiRouter.get("/reports/:id", async (req, res) => {
   const report = await getAiReport(req.params.id);
   if (!report) return res.status(404).json({ ok: false, error: "not found" });
   return res.json({ ok: true, report });
+});
+
+const reportIdSchema = z.string().min(1).max(80).regex(/^[A-Za-z0-9_-]+$/);
+const reportEditSchema = z
+  .object({
+    title: z.string().trim().min(1).max(150).refine((v) => !/[\r\n\0]/.test(v), "Invalid title"),
+    slackSummary: z.string().trim().min(1).max(2900).refine((v) => !v.includes("\0"), "Invalid Slack summary"),
+    markdown: z.string().trim().min(1).max(500_000).refine((v) => !v.includes("\0"), "Invalid report content"),
+  })
+  .strict();
+
+apiRouter.patch("/reports/:id", async (req, res) => {
+  if (!isDbConfigured()) return res.status(400).json({ ok: false, error: "DB not configured" });
+  const id = reportIdSchema.safeParse(req.params.id);
+  const body = reportEditSchema.safeParse(req.body);
+  if (!id.success || !body.success) return res.status(400).json({ ok: false, error: "Invalid report update" });
+  try {
+    const report = await updateAiReport(id.data, body.data);
+    if (!report) return res.status(404).json({ ok: false, error: "report not found" });
+    return res.json({ ok: true, report });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+apiRouter.delete("/reports/:id", async (req, res) => {
+  if (!isDbConfigured()) return res.status(400).json({ ok: false, error: "DB not configured" });
+  const id = reportIdSchema.safeParse(req.params.id);
+  if (!id.success) return res.status(400).json({ ok: false, error: "Invalid report id" });
+  try {
+    const deleted = await deleteAiReport(id.data);
+    if (!deleted) return res.status(404).json({ ok: false, error: "report not found" });
+    return res.json({ ok: true, id: id.data });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
 });
 
 // ── Slack post ────────────────────────────────────────────────────────────────

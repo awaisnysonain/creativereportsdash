@@ -86,6 +86,53 @@ function creatorTable(rows) {
 <% } %>
 
 <%
+function strategistTables(rows) {
+  rows = rows || [];
+%>
+  <div class="table-wrap">
+    <table class="data-table sortable">
+      <thead><tr>
+        <th>Strategist</th><th>002 code</th><th data-type="num">Spend</th><th data-type="num">USA TOF share</th><th data-type="num">Creatives</th><th data-type="num">Jobs</th><th data-type="num">Wins</th><th data-type="num">Win rate</th><th data-type="num">Meta ROAS</th><th data-type="num">Attributed ROAS</th><th data-type="num">NC ROAS</th><th data-type="num">New visitor %</th>
+      </tr></thead>
+      <tbody>
+        <% rows.forEach(function(s) { %>
+          <tr>
+            <td><strong><%= h.esc(s.name) %></strong><% if (s.attributionStatus !== 'confirmed') { %><div class="muted" style="font-size:11px">No confirmed live code</div><% } %></td>
+            <td><code><%= s.codes && s.codes.length ? '002' + h.esc(s.codes.join(', 002')) : '—' %></code></td>
+            <td class="tabular" data-sort="<%= s.spend %>"><%= s.attributionStatus === 'confirmed' ? h.fmtCurrency(s.spend, { compact: true }) : '—' %></td>
+            <td class="tabular" data-sort="<%= s.usaTofSpendShare %>"><%= s.attributionStatus === 'confirmed' ? h.fmtPercent(s.usaTofSpendShare) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtNumber(s.creatives) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtNumber(s.uniqueJobs) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? s.wins + ' / ' + s.losses : '—' %></td>
+            <td class="tabular" data-sort="<%= s.winRate %>"><%= s.attributionStatus === 'confirmed' ? h.fmtPercent(s.winRate, 1) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtRoas(s.metaRoas) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtRoas(s.attributedRoas) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtRoas(s.ncRoas) : '—' %></td>
+            <td class="tabular"><%= s.attributionStatus === 'confirmed' ? h.fmtPercent(s.newVisitorRate, 1) : '—' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="table-wrap" style="margin-top:14px">
+    <table class="data-table">
+      <thead><tr><th>Strategist</th><th>NC</th><th>IT</th><th>NC / IT untagged</th><th>NVNS</th><th>NSOV</th><th>NVOS</th><th>OVOS</th><th>Production untagged</th></tr></thead>
+      <tbody>
+        <% rows.forEach(function(s) { %>
+          <tr>
+            <td><strong><%= h.esc(s.name) %></strong></td>
+            <% if (s.attributionStatus !== 'confirmed') { %><td colspan="8" class="muted">Waiting for a confirmed 002 strategist code.</td><% } else { %>
+              <td class="tabular"><%= s.nc %></td><td class="tabular"><%= s.iterations %></td><td class="tabular"><%= s.strategyUntagged %></td>
+              <td class="tabular"><%= s.nvns %></td><td class="tabular"><%= s.nsov %></td><td class="tabular"><%= s.nvos %></td><td class="tabular"><%= s.ovos %></td><td class="tabular"><%= s.productionUntagged %></td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<%
 function scriptTable(rows) {
 %>
   <div class="table-wrap">
@@ -136,7 +183,8 @@ function scriptTable(rows) {
         <button type="button" class="tab" data-tab="opener">Opener (005)</button>
         <button type="button" class="tab" data-tab="color">Color (007/004)</button>
         <button type="button" class="tab" data-tab="demo">Creator Demo (013)</button>
-    <button type="button" class="tab" data-tab="creator">Creator Performance</button>
+        <button type="button" class="tab" data-tab="creator">Creator Performance</button>
+        <button type="button" class="tab" data-tab="strategist">Strategist Performance</button>
         <button type="button" class="tab" data-tab="script">Script Iteration</button>
       </div>
 
@@ -175,6 +223,14 @@ function scriptTable(rows) {
         <%- creatorTable(snapshot.l7.creators) %>
         <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
         <%- creatorTable(snapshot.l30.creators) %>
+      </div>
+
+      <div class="tab-panel" data-panel="strategist">
+        <p class="muted tab-panel-note">Attributed by confirmed 002 strategist codes. USA TOF share uses the exact <code>usa - tof - all</code> campaign. NC/IT and NVNS/NSOV/NVOS/OVOS are counted only when those explicit tags exist in the ad name; missing tags remain visible as untagged.</p>
+        <h4 class="win-head">L7 · <%= windows && windows.l7 %></h4>
+        <%- strategistTables((snapshot.strategists && snapshot.strategists.l7) || []) %>
+        <h4 class="win-head">L30 · <%= windows && windows.l30 %></h4>
+        <%- strategistTables((snapshot.strategists && snapshot.strategists.l30) || []) %>
       </div>
 
       <div class="tab-panel" data-panel="script">

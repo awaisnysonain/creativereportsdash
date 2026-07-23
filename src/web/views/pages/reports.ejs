@@ -21,11 +21,19 @@
     <div class="card-header card-header-actions">
       <div class="card-title" id="report-title"><% var initTitle = null; for (var ti = 0; ti < reports.length; ti++) { if (reports[ti].id === initialId) { initTitle = reports[ti]; break; } } if (!initTitle && reports.length) initTitle = reports[0]; %><%= reports.length ? h.esc(initTitle.title) : 'No report selected' %></div>
       <div class="card-actions">
+        <button type="button" class="btn outline sm" id="btn-edit-report" <%= !reports.length ? 'disabled' : '' %>>Edit report</button>
         <button type="button" class="btn outline sm" id="btn-regenerate" data-job="generateWeeklyAIReport" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('refresh') %> Regenerate narrative</button>
         <button type="button" class="btn sm" id="btn-slack-post" <%= !reports.length ? 'disabled' : '' %>><%- h.icon('send') %> Send to Slack</button>
+        <button type="button" class="btn destructive-outline sm" id="btn-delete-report" <%= !reports.length ? 'disabled' : '' %>>Delete</button>
       </div>
     </div>
     <div class="card-body">
+      <form id="report-editor" class="report-editor" hidden>
+        <div class="field"><label for="report-edit-title">Report title</label><input id="report-edit-title" class="input" required maxlength="150"/></div>
+        <div class="field"><label for="report-edit-slack">Slack summary</label><textarea id="report-edit-slack" class="input report-textarea" required maxlength="2900" rows="8"></textarea><div class="field-help">This is the exact summary sent to the configured Slack channel and direct recipient.</div></div>
+        <div class="field"><label for="report-edit-markdown">Full report</label><textarea id="report-edit-markdown" class="input report-textarea markdown-source" required maxlength="500000" rows="24"></textarea></div>
+        <div class="report-editor-actions"><button type="submit" class="btn sm" id="btn-save-report">Save changes</button><button type="button" class="btn outline sm" id="btn-cancel-edit">Cancel</button></div>
+      </form>
       <div class="tabs" data-tabs="report-view">
         <button type="button" class="tab active" data-tab="markdown">Full report</button>
         <button type="button" class="tab" data-tab="slack">Slack preview</button>
@@ -51,4 +59,4 @@
   </div>
 </div>
 
-<script type="application/json" id="reports-data"><%- JSON.stringify(reports.map(r => ({ id: r.id, title: r.title, markdown: r.markdown, slack_summary: r.slack_summary, model: r.model }))) %></script>
+<script type="application/json" id="reports-data"><%- h.jsonForHtml(reports.map(r => ({ id: r.id, run_id: r.run_id, title: r.title, markdown: r.markdown, slack_summary: r.slack_summary, model: r.model }))) %></script>

@@ -49,9 +49,17 @@ export const STRAT_CODES: Record<string, string> = {
   FA: "Franz",
   TC: "Taylor",
   LK: "Luke",
-  CA: "CA",
+  CA: "Chris",
   NOP: "NOP",
 };
+
+export const STRATEGIST_ROSTER = [
+  { key: "luke", name: "Luke", codes: ["LK"], confirmed: true },
+  { key: "taylor", name: "Taylor", codes: ["TC"], confirmed: true },
+  { key: "franz", name: "Franz", codes: ["FA"], confirmed: true },
+  { key: "chris", name: "Chris", codes: ["CA"], confirmed: true },
+  { key: "roger", name: "Roger Hayn", codes: [], confirmed: false },
+] as const;
 
 /** 003 — Category. Modern convention. Sourced from both video + image builders. */
 export const CATEGORY_CODES: Record<string, string> = {
