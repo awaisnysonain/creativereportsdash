@@ -288,6 +288,12 @@ export interface AiReportRow {
   created_at: string;
 }
 
+export interface PublishedReportRow extends AiReportRow {
+  run_status: string;
+  run_trigger: string;
+  run_finished_at: string | null;
+}
+
 export async function saveAiReport(input: {
   runId?: string | null;
   brandKey?: string | null;
@@ -311,6 +317,28 @@ export async function getAiReport(id: string): Promise<AiReportRow | null> {
 
 export async function listAiReports(limit = 50): Promise<AiReportRow[]> {
   return query<AiReportRow>(`SELECT * FROM ai_reports ORDER BY created_at DESC LIMIT $1`, [limit]);
+}
+
+export async function getLatestPublishedReport(brand: string): Promise<PublishedReportRow | null> {
+  return queryOne<PublishedReportRow>(
+    `SELECT ar.*, sr.status AS run_status, sr.trigger AS run_trigger, sr.finished_at::text AS run_finished_at
+     FROM ai_reports ar
+     JOIN sync_runs sr ON sr.id = ar.run_id
+     WHERE ar.brand_key = $1 AND sr.status = 'success'
+     ORDER BY ar.created_at DESC
+     LIMIT 1`,
+    [brand],
+  );
+}
+
+export async function getPublishedReport(id: string): Promise<PublishedReportRow | null> {
+  return queryOne<PublishedReportRow>(
+    `SELECT ar.*, sr.status AS run_status, sr.trigger AS run_trigger, sr.finished_at::text AS run_finished_at
+     FROM ai_reports ar
+     JOIN sync_runs sr ON sr.id = ar.run_id
+     WHERE ar.id = $1 AND sr.status = 'success'`,
+    [id],
+  );
 }
 
 export async function updateAiReport(

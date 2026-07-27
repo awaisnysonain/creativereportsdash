@@ -1,8 +1,10 @@
-import { Router, type Request, type Response } from "express";
+import { timingSafeEqual } from "node:crypto";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
 import { z } from "zod";
 import { isDbConfigured, pingDb } from "@/lib/db/client";
-import { envHealth } from "@/lib/env";
+import { env, envHealth } from "@/lib/env";
+import { nextWeeklyRun } from "@/lib/dates";
 import { getWeeklySchedulerStatus } from "@/lib/scheduler/weekly";
 import { getBrand, type BrandKey } from "@/config/brands";
 import {
@@ -15,7 +17,7 @@ import {
   syncTripleWhaleWindow,
   weeklyFullRun,
 } from "@/lib/jobs/pipeline";
-import { createSyncRun, deleteAiReport, getAiReport, getSyncRun, latestSuccessfulRun, listSyncRuns, saveSlackPost, updateAiReport } from "@/lib/db/repositories";
+import { createSyncRun, deleteAiReport, getAiReport, getLatestPublishedReport, getPublishedReport, getSyncRun, latestSuccessfulRun, listSyncRuns, saveSlackPost, updateAiReport, type PublishedReportRow } from "@/lib/db/repositories";
 import { importMetaCsv, importMetaXlsx } from "@/lib/importer/meta-csv";
 import { testMetaConnection } from "@/lib/services/meta";
 import { testTwConnection } from "@/lib/services/triplewhale";
@@ -26,6 +28,49 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 function origin(req: Request): string {
   return `${req.protocol}://${req.get("host")}`;
+}
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function requireReportApiKey(req: Request, res: Response, next: NextFunction) {
+  if (!env.REPORT_API_KEY) return res.status(503).json({ ok: false, error: "Report API is not configured" });
+  const authorization = req.get("authorization") ?? "";
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+  const supplied = req.get("x-api-key") ?? bearer;
+  if (!supplied || !constantTimeEqual(supplied, env.REPORT_API_KEY)) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+  return next();
+}
+
+function externalReportPayload(report: PublishedReportRow) {
+  const scheduler = getWeeklySchedulerStatus();
+  return {
+    ok: true,
+    report: {
+      id: report.id,
+      brand: report.brand_key,
+      title: report.title,
+      slackSummary: report.slack_summary,
+      markdown: report.markdown,
+      generatedAt: report.created_at,
+      runId: report.run_id,
+      runCompletedAt: report.run_finished_at,
+      runTrigger: report.run_trigger,
+    },
+    schedule: {
+      enabled: scheduler.enabled,
+      cron: scheduler.cron,
+      day: scheduler.day,
+      hour: scheduler.hour,
+      timezone: scheduler.timezone,
+      nextRunAt: nextWeeklyRun().toISOString(),
+    },
+  };
 }
 
 // ── Health ────────────────────────────────────────────────────────────────
@@ -196,6 +241,32 @@ apiRouter.post("/import", upload.single("file"), async (req: Request, res: Respo
 });
 
 // ── Reports ──────────────────────────────────────────────────────────────────
+apiRouter.get("/external/reports/latest", requireReportApiKey, async (req, res) => {
+  const parsed = z.object({ brand: z.enum(["NOBL", "FLO"]).default("NOBL") }).safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Invalid brand" });
+  try {
+    const report = await getLatestPublishedReport(parsed.data.brand);
+    if (!report) return res.status(404).json({ ok: false, error: "No published report found" });
+    res.set("Cache-Control", "private, no-store");
+    return res.json(externalReportPayload(report));
+  } catch {
+    return res.status(500).json({ ok: false, error: "Unable to load report" });
+  }
+});
+
+apiRouter.get("/external/reports/:id", requireReportApiKey, async (req, res) => {
+  const id = z.string().min(1).max(80).regex(/^[A-Za-z0-9_-]+$/).safeParse(req.params.id);
+  if (!id.success) return res.status(400).json({ ok: false, error: "Invalid report id" });
+  try {
+    const report = await getPublishedReport(id.data);
+    if (!report) return res.status(404).json({ ok: false, error: "Report not found" });
+    res.set("Cache-Control", "private, no-store");
+    return res.json(externalReportPayload(report));
+  } catch {
+    return res.status(500).json({ ok: false, error: "Unable to load report" });
+  }
+});
+
 apiRouter.get("/reports/:id", async (req, res) => {
   if (!isDbConfigured()) return res.status(400).json({ ok: false, error: "DB not configured" });
   const report = await getAiReport(req.params.id);

@@ -1,5 +1,5 @@
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
-import { subDays } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { addDays, setHours, setMilliseconds, setMinutes, setSeconds, subDays } from "date-fns";
 import { env } from "@/lib/env";
 
 /**
@@ -114,4 +114,19 @@ export function weeklyCron(): string {
   const hour = env.WEEKLY_RUN_HOUR ?? 8;
   const dow = DAY_INDEX[env.WEEKLY_RUN_DAY] ?? 2;
   return `0 ${hour} * * ${dow}`;
+}
+
+/** Next weekly scheduler tick as an absolute UTC instant. */
+export function nextWeeklyRun(reference: Date = new Date()): Date {
+  const timezone = TZ();
+  const zonedNow = toZonedTime(reference, timezone);
+  const targetDay = DAY_INDEX[env.WEEKLY_RUN_DAY] ?? 2;
+  let daysAhead = (targetDay - zonedNow.getDay() + 7) % 7;
+  let candidate = setMilliseconds(
+    setSeconds(setMinutes(setHours(zonedNow, env.WEEKLY_RUN_HOUR ?? 8), 0), 0),
+    0,
+  );
+  if (daysAhead === 0 && candidate <= zonedNow) daysAhead = 7;
+  candidate = addDays(candidate, daysAhead);
+  return fromZonedTime(candidate, timezone);
 }

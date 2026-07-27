@@ -37,6 +37,7 @@ const rawSchema = z.object({
   SLACK_REPORT_USER_IDS: z.string().optional().default(""),
 
   // Reporting / scheduling
+  REPORT_API_KEY: z.string().optional().default(""),
   REPORT_TIMEZONE: z.string().optional().default("America/New_York"),
   WEEKLY_RUN_DAY: z
     .enum(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
